@@ -1,4 +1,4 @@
-Require Export Arith String List Omega.
+Require Export map.
 
 Inductive val : Type :=
 | VUnit : val
