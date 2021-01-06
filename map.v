@@ -748,3 +748,114 @@ Proof.
   destruct m. unfold mlookup. simpl.
   unfold mfresh. simpl. apply mfresh_lookup_raw.
 Qed.
+
+Lemma munion_lookup_inv_l {A} (m1 m2 : map A) x:
+  mlookup (munion m1 m2) x = None -> mlookup m1 x = None.
+Proof.
+  intros.
+  rewrite munion_lookup in H.
+  destruct (mlookup m1 x).
+  + discriminate.
+  + simpl in H. reflexivity.
+Qed.
+
+
+Lemma munion_lookup_inv_r {A} (m1 m2 : map A) x:
+  mlookup (munion m1 m2) x = None -> mlookup m2 x = None.
+Proof.
+  intros.
+  rewrite munion_lookup in H.
+  destruct (mlookup m1 x).
+  + discriminate.
+  + simpl in H. assumption.
+Qed.
+
+Lemma mfresh_lookup_r {A} (m mf : map A):
+      mlookup mf (mfresh (munion m mf)) = None.
+Proof.
+  eapply munion_lookup_inv_r.
+  eapply mfresh_lookup.
+Qed.
+
+Lemma mfresh_lookup_l {A} (m mf : map A):
+      mlookup m (mfresh (munion m mf)) = None.
+Proof.
+  eapply munion_lookup_inv_l.
+  eapply mfresh_lookup.
+Qed.
+
+
+Lemma mfresh_disjoint_r {A} (m mf: map A) v:
+  mdisjoint (msingleton (mfresh (munion m mf)) v) mf.
+Proof.
+  apply mdisjoint_singleton.
+  apply mfresh_lookup_r.
+Qed.
+
+Lemma mfresh_disjoint_l {A} (m mf: map A) v:
+  mdisjoint (msingleton (mfresh (munion m mf)) v) m.
+Proof.
+  apply mdisjoint_singleton.
+  apply mfresh_lookup_l.
+Qed.
+
+(* what happens when free is called on one of two disjoint memories? *)
+(* we only need one lemma here because we can only free memory in m *)
+Lemma mdelete_disjoint {A} (m mf : map A) l:
+  mdisjoint m mf -> mdisjoint (mdelete l m) mf.
+Proof.
+  intros.
+  unfold mdisjoint.
+  intros.
+  destruct (Nat.eq_dec l i).
+  - subst l.
+    left. apply mdelete_lookup.
+  - destruct (H i) as [Hm | Hmf].
+    + left. rewrite mdelete_lookup_ne; auto.
+    + auto.
+Qed.
+
+Lemma mdelete_inv {A} (m : map A) l:
+    mlookup m l = None -> (mdelete l m) = m.
+Proof.
+  intro.
+  apply map_eq.
+  intro.
+  destruct (Nat.eq_dec l i).
+  - subst l.
+    rewrite mdelete_lookup. symmetry. assumption.
+  - rewrite mdelete_lookup_ne. reflexivity. assumption.
+Qed.
+
+Lemma disjoint_r_some {A} (m mf : map A) l v:
+  mlookup (munion m mf) l = Some(v) ->
+  mdisjoint m mf -> mlookup m l = None -> mlookup mf l = Some(v).
+Admitted.
+
+Lemma disjoint_r_none {A} (m mf : map A) l v:
+  mlookup (munion m mf) l = Some(v) ->
+  mdisjoint m mf -> mlookup m l = Some(v) -> mlookup mf l = None.
+Proof.
+  intros.
+  specialize (H0 l).
+  destruct H0.
+  + rewrite H1 in H0. discriminate.
+  + assumption.
+Qed.
+
+Lemma disjoint_l_some {A} (m mf : map A) l v:
+  mlookup (munion m mf) l = Some(v) ->
+  mdisjoint m mf -> mlookup mf l = None -> mlookup m l = Some(v).
+Admitted.
+
+
+Lemma disjoint_l_none {A} (m mf : map A) l v:
+  mlookup (munion m mf) l = Some(v) ->
+  mdisjoint m mf -> mlookup mf l = Some(v) -> mlookup m l = None.
+Proof.
+  intros.
+  specialize (H0 l).
+  destruct H0.
+  + assumption.
+  + rewrite H1 in H0. discriminate.
+Qed.
