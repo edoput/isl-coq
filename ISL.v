@@ -205,3 +205,41 @@ Inductive steps : expr -> mem -> expr -> mem -> Prop :=
      steps e1 m1 e3 m3.
 
 
+(* now that we have the starting point of our operational semantic
+   I can focus on what it means for an expression to be an error.
+   All our examples are syntactically correct (or should be) and
+   the types check out so we are referring to be _semantically
+   correct_ (?). The usage of resources in our program is correct
+   if we can always reduce an expression to a value so any
+   expression that does not reduce to a value will contain
+   a resource error or an **error** form.
+ *)
+
+Definition is_val e :=
+  match e with
+  | EVal _ => true
+  | _ => false
+  end.
+
+
+(* This is our first attempt. An expression is an error when it's not
+   a value and cannot be reduced anymore *)
+Definition is_error e h := not (is_val e) /\ forall e' h', not (head_step e h e' h').
+
+Example simple_error := is_error (EError) (mempty).
+
+Lemma our_first_error : simple_error.
+Proof.
+  unfold simple_error, is_error.
+  split.
+  - auto.
+  - intros.
+    unfold not.
+    intro.
+    (* now we got a proof of head_step for an expression EError
+       which is not a thing in our operational semantic; the contradiction
+       must come from there.
+     *)
+    inversion H.
+Qed.
+
