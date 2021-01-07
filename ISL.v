@@ -243,3 +243,20 @@ Proof.
     inversion H.
 Qed.
 
+Lemma resource_error : is_error (EFree (EVal (VLoc 0))) (mempty).
+Proof.
+  unfold is_error.
+  split.
+  - auto.
+  - intros.
+    unfold not.
+    intros.
+    inversion H.
+    (* here we can use that the empty map is empty and the result is always None
+       to get our contradiction in H1.
+     *)
+    rewrite mempty_lookup in H1.
+    destruct H1.
+    reflexivity.
+Qed.
+
