@@ -1,9 +1,7 @@
-(* From stdpp Require Export gmap. *)
+From stdpp Require Export gmap.
 
 Require Export Arith String List Omega.
 Export ListNotations.
-
-Require Export map.
 
 Inductive val : Type :=
 | VUnit : val
@@ -115,8 +113,37 @@ Fixpoint subst (x : string) (w : val) (e : expr) : expr :=
   | EError => EError
   end.
 
-(* our previous map definition was from nat to val so we might as well continue like this *)
-Notation mem := (map val).
+(* our previous map definition was from nat to val so we might as well continue like this.
+   The API for maps is defined in the stdpp documenation here https://plv.mpi-sws.org/coqdoc/stdpp/stdpp.base.html#lab27
+   and it boils down to
+   
+   Class Lookup (K A M : Type) := lookup: K → M → option A.
+   Notation "m !! i" := (lookup i m) (at level 20) : stdpp_scope.
+
+   Class SingletonM K A M := singletonM: K → A → M.
+   Notation "{[ k := a ]}" := (singletonM k a) (at level 1) : stdpp_scope.
+
+   Class Insert (K A M : Type) := insert: K → A → M → M.
+   Notation "<[ k := a ]>" := (insert k a)
+            (at level 5, right associativity, format "<[ k := a ]>") : stdpp_scope.
+
+   Class Delete (K M : Type) := delete: K → M → M.
+
+   Class Alter (K A M : Type) := alter: (A → A) → K → M → M.
+ *)
+
+(* Q: To keep track of the resources used and the underlying values we will never
+   delete from this map but only alter the values to be None on delete.
+ *)
+Notation mem := (gmap nat val).
+
+(* Our new heap model is still missing one operation we rely on, _mfresh_,
+   to give us a location which is fresh and does not alias any previous one.
+
+   Robbert also suggested to make the allocation non-deterministic to make
+   it impossible to free a cell, invalidating the location, and immediately
+   after allocate the same cell.
+*)
 
 Inductive head_step : expr -> mem -> expr -> mem -> Prop :=
   | Let_headstep m y e2 v1 :
@@ -132,17 +159,18 @@ Inductive head_step : expr -> mem -> expr -> mem -> Prop :=
   | Op_headstep m op v1 v2 v :
      eval_bin_op op v1 v2 = Some v ->
      head_step (EOp op (EVal v1) (EVal v2)) m (EVal v) m
-  | Alloc_headstep m v :
-     head_step (EAlloc (EVal v)) m (EVal (VLoc (mfresh m))) (minsert (mfresh m) v m)
+  | Alloc_headstep m v l:
+     lookup l m = None ->
+     head_step (EAlloc (EVal v)) m (EVal (VLoc l)) (insert l v m)
   | Free_headstep m l :
-     mlookup m l <> None ->
-     head_step (EFree (EVal (VLoc l))) m (EVal VUnit) (mdelete l m)
+     lookup l m <> None ->
+     head_step (EFree (EVal (VLoc l))) m (EVal VUnit) (delete l m)
   | Load_headstep m l v :
-     mlookup m l = Some v ->
+     lookup l m = (Some v) ->
      head_step (ELoad (EVal (VLoc l))) m (EVal v) m
   | Store_headstep m l v :
-     mlookup m l <> None ->
-     head_step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (minsert l v m)
+     lookup l m <> None ->
+     head_step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (alter (fun _ => v) l m)
   (* new : the ambiguos expression reduces to any natural number *)
   | Amb_headstep m (n : nat):
      head_step EAmb m (EVal (VNat n)) m.
@@ -222,9 +250,11 @@ Definition is_val e :=
   end.
 
 
-(* This is our first attempt. An expression is an error when it's not
+(* This is our first attempt. an expression is an error when it's not
    a value and cannot be reduced anymore *)
 Definition is_error e h := not (is_val e) /\ forall e' h', not (head_step e h e' h').
+
+Definition mempty : (gmap nat val) := GMap empty I.
 
 Example simple_error := is_error (EError) (mempty).
 
@@ -243,7 +273,7 @@ Proof.
     inversion H.
 Qed.
 
-Lemma resource_error : is_error (EFree (EVal (VLoc 0))) (mempty).
+Lemma resource_error l: is_error (EFree (EVal (VLoc l))) (mempty).
 Proof.
   unfold is_error.
   split.
