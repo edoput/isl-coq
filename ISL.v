@@ -1,5 +1,5 @@
 From stdpp Require Export gmap.
-
+(* test *)
 Require Export Arith String List Omega.
 Export ListNotations.
 
@@ -88,7 +88,7 @@ Definition eval_bin_op (op : bin_op) (v1 v2 : val) : option val :=
   | EqOp, VNat n1, VNat n2 => Some (VBool (Nat.eqb n1 n2))
   | EqOp, VBool n1, VBool n2 => Some (VBool (Bool.eqb n1 n2))
   | EqOp, VUnit, VUnit => Some (VBool true) (* new *)
-  | EqOp, VLoc l1, VLoc l2 => Some (VBool (Nat.eqb l1 l2)) (* new *) 
+  | EqOp, VLoc l1, VLoc l2 => Some (VBool (Nat.eqb l1 l2)) (* new *)
   | _, _, _ => None
   end.
 
@@ -116,7 +116,7 @@ Fixpoint subst (x : string) (w : val) (e : expr) : expr :=
 (* our previous map definition was from nat to val so we might as well continue like this.
    The API for maps is defined in the stdpp documenation here https://plv.mpi-sws.org/coqdoc/stdpp/stdpp.base.html#lab27
    and it boils down to
-   
+
    Class Lookup (K A M : Type) := lookup: K → M → option A.
    Notation "m !! i" := (lookup i m) (at level 20) : stdpp_scope.
 
