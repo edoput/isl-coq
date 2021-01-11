@@ -310,3 +310,18 @@ Proof.
    intros Hin.
    specialize (H _ Hin). lia.
 Qed.
+
+(*
+
+[P] e [v. Q v]_ERROR :=  (∃ h h' e', P h ∧ step e h e' h') ∧ is_stuck e') ∨ ∀ v h', Q v h' -> ∃ h, P h ∧ step e h (EVal v) h'
+
+[P] e []_ERROR := ∃ h h' e', P h ∧ step e h e' h' ∧ is_stuck e'
+
+[P] e [v. Q v] := ∀ v h', ∃ h, P h ∧ step e h EVal v h'
+
+[P] E1 [v. Q v]_ERROR
+[P] E1; E2 []_ERROR
+
+E1; E2
+
+*)
