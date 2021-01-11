@@ -1,5 +1,5 @@
 From stdpp Require Export gmap.
-(* test *)
+
 Require Export Arith String List Omega.
 Export ListNotations.
 
@@ -254,9 +254,8 @@ Definition is_val e :=
    a value and cannot be reduced anymore *)
 Definition is_error e h := not (is_val e) /\ forall e' h', not (head_step e h e' h').
 
-Definition mempty : (gmap nat val) := GMap empty I.
 
-Example simple_error := is_error (EError) (mempty).
+Example simple_error := is_error EError ∅.
 
 Lemma our_first_error : simple_error.
 Proof.
@@ -273,20 +272,10 @@ Proof.
     inversion H.
 Qed.
 
-Lemma resource_error l: is_error (EFree (EVal (VLoc l))) (mempty).
+Lemma resource_error l: is_error (EFree (EVal (VLoc l))) ∅.
 Proof.
-  unfold is_error.
-  split.
-  - auto.
-  - intros.
-    unfold not.
-    intros.
-    inversion H.
-    (* here we can use that the empty map is empty and the result is always None
-       to get our contradiction in H1.
-     *)
-    rewrite mempty_lookup in H1.
-    destruct H1.
-    reflexivity.
+  split; [auto|].
+  intros ???H.
+  inversion H.
+  by rewrite lookup_empty in H1.
 Qed.
-
