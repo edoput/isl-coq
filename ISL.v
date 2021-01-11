@@ -295,3 +295,18 @@ Proof.
   unfold contains_error, may_error.
   intros.
   eexists EError, m.
+Admitted.
+
+
+Lemma foo (xs : list nat) :
+   1 + max_list xs ∉ xs.
+Proof.
+   assert (∀ x, x ∈ xs -> x < 1 + max_list xs).
+   {
+      intros x Hx.
+      assert (x <= max_list xs); [|lia].
+      apply max_list_elem_of_le. done.
+   }
+   intros Hin.
+   specialize (H _ Hin). lia.
+Qed.
