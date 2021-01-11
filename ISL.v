@@ -325,11 +325,17 @@ Questions:
 - Maybe we only want #1 and #2, because #1 is weaker than #3, so it's easier to prove, but proving #1 is always sufficient, because if we are in the left disjunct, then we already proved our end goal. Question: is this reasoning correct?
 - Maybe we want #2 and #3, because that's what they do in the paper. Question: is that correct?
 - Why does the paper care about the final heap state if there is already an error?
--
+- Which proof rules are valid for the #1,#2,#3?
+- Edoardo's questions...
 
-[P] E1 [v. Q v]_ERROR
-[P] E1; E2 []_ERROR
-
-E1; E2
+Plan:
+- Try to answer the questions and add more questions
+- Prove that the push_back example has an error
+- Define #1,#2,#3 in Coq
+- Prove that the examples are incorrect accoring to #2
+- Define mfresh and prove that it gives something fresh
+- Come up with a good name for foo
+- Try and automate steps
+- Get unicode working in emacs: https://gitlab.mpi-sws.org/iris/iris/-/blob/master/docs/editor.md
 
 *)
