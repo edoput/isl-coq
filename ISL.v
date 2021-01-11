@@ -313,11 +313,19 @@ Qed.
 
 (*
 
-[P] e [v. Q v]_ERROR :=  (∃ h h' e', P h ∧ step e h e' h') ∧ is_stuck e') ∨ ∀ v h', Q v h' -> ∃ h, P h ∧ step e h (EVal v) h'
+Question: which of these do we want?
+
+[P] e [v. Q v]_ERROR :=  (∃ h h' e', P h ∧ step e h e' h' ∧ is_stuck e') ∨ ∀ v h', Q v h' -> ∃ h, P h ∧ step e h (EVal v) h'
 
 [P] e []_ERROR := ∃ h h' e', P h ∧ step e h e' h' ∧ is_stuck e'
 
 [P] e [v. Q v] := ∀ v h', ∃ h, P h ∧ step e h EVal v h'
+
+Questions:
+- Maybe we only want #1 and #2, because #1 is weaker than #3, so it's easier to prove, but proving #1 is always sufficient, because if we are in the left disjunct, then we already proved our end goal. Question: is this reasoning correct?
+- Maybe we want #2 and #3, because that's what they do in the paper. Question: is that correct?
+- Why does the paper care about the final heap state if there is already an error?
+-
 
 [P] E1 [v. Q v]_ERROR
 [P] E1; E2 []_ERROR
