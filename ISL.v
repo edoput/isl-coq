@@ -279,3 +279,19 @@ Proof.
   inversion H.
   by rewrite lookup_empty in H1.
 Qed.
+
+(* Now that we have found what it means for an expression to be an error
+   we can move on to whole programs that contain an error
+ *)
+Definition contains_error e h := exists e' h', steps e h e' h' /\ is_error e' h'.
+
+Example may_error :=
+  (EIf (EOp EqOp EAmb (EVal (VNat 0)))
+       EError
+       (EVal VUnit)).
+
+Lemma may_error_contains_error : forall m,  contains_error may_error m.
+Proof.
+  unfold contains_error, may_error.
+  intros.
+  eexists EError, m.
