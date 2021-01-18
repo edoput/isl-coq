@@ -137,13 +137,15 @@ Fixpoint subst (x : string) (w : val) (e : expr) : expr :=
  *)
 Notation mem := (gmap nat val).
 
-(* Our new heap model is still missing one operation we rely on, _mfresh_,
-   to give us a location which is fresh and does not alias any previous one.
+Definition memfresh (m : mem) : nat := fresh (dom (gset nat) m).
 
-   Robbert also suggested to make the allocation non-deterministic to make
-   it impossible to free a cell, invalidating the location, and immediately
-   after allocate the same cell.
-*)
+Lemma memfresh_is_fresh m : lookup (memfresh m) m = None.
+Proof.
+  unfold memfresh.
+  apply not_elem_of_dom.
+  apply is_fresh.
+Qed.
+
 
 Inductive head_step : expr -> mem -> expr -> mem -> Prop :=
   | Let_headstep m y e2 v1 :
@@ -181,6 +183,15 @@ Inductive head_step : expr -> mem -> expr -> mem -> Prop :=
    provide a proof that mlookup m l <> None then you cannot reduce
    EFree (EVal (VLoc l)) as it would be an error.
  *)
+
+Lemma Alloc_fresh_headstep m l v:
+      l = (memfresh m) ->
+      head_step (EAlloc (EVal v)) m (EVal (VLoc l)) (insert l v m).
+Proof.
+  intros ->.
+  econstructor.
+  apply memfresh_is_fresh.
+  Qed.
 
 Create HintDb head_step.
 Hint Constructors head_step : head_step.
@@ -223,6 +234,29 @@ Inductive step : expr -> mem -> expr -> mem -> Prop :=
   | do_step E m1 m2 e1 e2 :
      head_step e1 m1 e2 m2 ->
      step (fill E e1) m1 (fill E e2) m2.
+
+(* Let's look at some automation for goals of shape step L m L' m' *)
+
+(* the default is to use an empty context as (fill [] e) = e *)
+
+Lemma fill_empty_context e : (fill [] e) = e.
+Proof. auto. Qed.
+
+Create HintDb step.
+(* but for more specialized forms we can keep going *)
+
+Lemma step_fill_let s e1 e2 : (fill [(LetCtx s e2)] e1) = (ELet s e1 e2).
+Proof. auto. Qed.
+
+Hint Extern 10 (step (ELet _ _ _) _ (ELet _ _ _) _) => rewrite <- 2 ! step_fill_let; econstructor : step.
+
+(* let's try our automation *)
+Lemma foo s : step (ELet s (EOp PlusOp (EVal (VNat 1)) (EVal (VNat 1)))
+                            (EVar s)) empty
+                   (ELet s (EVal (VNat 2)) (EVar s)) empty.
+Proof.
+  debug eauto with step head_step.
+  Qed.
 
 Inductive steps : expr -> mem -> expr -> mem -> Prop :=
   | steps_refl m e :
