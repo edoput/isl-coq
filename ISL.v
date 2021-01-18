@@ -61,7 +61,7 @@ Compute example_push_back.
 Definition client : expr :=
     (ELet "w" (EAlloc (EVal (VNat 0)))
           (ELet "v" (EAlloc (EVar "w"))
-                      
+
     (ELet "x" (ELoad (EVar "v"))
           (ESeq (push_back (EVar "v")) (* here the underlying storage for v might be moved *)
                 (EStore (EVar "x") (EVal (VNat 88))))))). (* so using the previous location might fault *)
@@ -409,7 +409,8 @@ Qed.
 Definition amb_bool := (EOp EqOp EAmb (EVal (VNat 0))).
 
 Lemma amb_is_ambiguous (b : bool) (m : mem) : steps amb_bool m (EVal (VBool b)) m.
-Proof.
+Admitted.
+(* Proof.
   apply (steps_step m m m
                     (EOp EqOp EAmb (EVal (VNat 0)))
                     (EOp EqOp (EVal (VNat (if b then 0 else 1))) (EVal (VNat 0)))).
@@ -424,7 +425,7 @@ Proof.
   simpl.
   do 2 apply f_equal.
   destruct b; reflexivity.
-Qed.
+Qed. *)
 
 (* composing 0+ steps still yields 0+ steps *)
 Lemma steps_mono e e' e'' h h' h'':
@@ -482,6 +483,50 @@ Proof.
       apply lookup_union_None.
       split; apply lookup_singleton_ne; auto.
 Admitted.
+
+Definition iProp := mem -> Prop.
+Definition iEmp : iProp := λ m, m = ∅.
+Definition iPoints (l : nat) (v : val) : iProp := λ m, m = {[ l := v ]}.
+Definition iSep (P Q : iProp) : iProp := λ m, ∃ m1 m2, m = m1 ∪ m2 ∧ m1 ##ₘ m2 ∧ P m1 ∧ Q m2.
+Definition iWand (P Q : iProp) : iProp := λ m, ∀ m', m ##ₘ m' → P m' → Q (m ∪ m').
+Definition iForall {A} (P : A -> iProp) : iProp := λ m, ∀ x, P x m.
+Definition iExists {A} (P : A -> iProp) : iProp := λ m, ∃ x, P x m.
+Definition iPure (φ : Prop) : iProp := λ _, φ.
+Definition iEntails (P Q : iProp) : Prop := ∀ m, P m → Q m.
+
+(*
+  Intuitively, (iReaches P e v) means that:
+    "There is a heap in P that makes e evaluate to v and the current heap."
+*)
+Definition iReaches (P : iProp) (e : expr) (v : val) : iProp :=
+  λ m', ∃ m, P m ∧ steps e m (EVal v) m'.
+
+Definition reaches' (P : iProp) (e : expr) (Q : val → iProp) :=
+    ∀ v, iEntails (Q v) (iReaches P e v).
+
+Lemma reaches_reaches' P e Q :
+  reaches P e Q ↔ reaches' P e Q.
+Proof. reflexivity. Qed.
+
+Definition iError (P : iProp) (e : expr) : iProp :=
+  λ m', ∃ m e', P m ∧ steps e m e' m' ∧ is_error e' m'.
+
+Definition will_error' (P : iProp) (e : expr) :=
+  ∃ m', iError P e m'.
+
+Lemma will_error_will_error' P e :
+  will_error P e ↔ will_error' P e.
+Proof. split; intros (m1 & m2 & ?); by exists m2,m1. Qed.
+
+(*
+  It's not very clear to me how to write those as iProps.
+  The iReaches seems plausible to me, but iError IDK.
+  Maybe will_error should just be a Prop?
+  Maybe it should have a postcondition like in the paper?
+  Maybe you can take a look at how they do a complete proof using the rules in the paper.
+  Maybe that can be used to figure out how to do it using an analogue of WP in seplogic.
+*)
+
 
 (*
 
