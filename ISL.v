@@ -410,18 +410,24 @@ Proof.
     inversion H.
 Qed.
 
-
-Lemma foo (xs : list nat) :
-   1 + max_list xs ∉ xs.
+(* composing 0+ steps still yields 0+ steps *)
+Lemma steps_mono e e' e'' h h' h'':
+  steps e h e' h' -> steps e' h' e'' h'' -> steps e h e'' h''.
 Proof.
-   assert (∀ x, x ∈ xs -> x < 1 + max_list xs).
-   {
-      intros x Hx.
-      assert (x <= max_list xs); [|lia].
-      apply max_list_elem_of_le. done.
-   }
-   intros Hin.
-   specialize (H _ Hin). lia.
+  intros.
+  induction H, H0; eauto using steps.
+Qed.
+
+(* if an error state is reachable in a sub-expression then we might get lucky *)
+Lemma contains_error_mono e e' h h' :
+  steps e h e' h' -> contains_error e' h' -> contains_error e h.
+Proof.
+  intros.
+  unfold contains_error in *.
+  destruct H0. destruct H0. destruct H0.
+  eexists x, x0.
+  split; auto.
+  eapply steps_mono; eassumption.
 Qed.
 
 (*
