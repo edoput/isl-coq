@@ -357,7 +357,15 @@ Proof.
 Qed.
 
 (* Now that we have found what it means for an expression to be an error
-   we can move on to whole programs that contain an error
+   we can move on to whole programs that contain an error.
+
+   An expression may reduce to many values and it's not just non determinism
+   but control structures such _if_ and _while_. The idea we are after is that
+   we need to prove something may error and we encode it as _there is one reduction
+   path leading us to an error_.
+
+   The alternative is that forall paths there is no error so we can now
+   also describe correctness.
  *)
 Definition contains_error e h := exists e' h', steps e h e' h' /\ is_error e' h'.
 
@@ -371,7 +379,36 @@ Proof.
   unfold contains_error, may_error.
   intros.
   eexists EError, m.
-Admitted.
+  split.
+  - apply (steps_step
+             m m m
+             (EIf (EOp EqOp EAmb (EVal (VNat 0))) EError (EVal VUnit))
+             (EIf (EOp EqOp (EVal (VNat 0)) (EVal (VNat 0))) EError (EVal VUnit))).
+    + change (EIf (EOp EqOp EAmb (EVal (VNat 0))) EError (EVal VUnit)) with
+          (fill [(IfCtx EError (EVal VUnit)); (OpCtxL EqOp (EVal (VNat 0)))] EAmb).
+      change (EIf (EOp EqOp (EVal (VNat 0)) (EVal (VNat 0))) EError (EVal VUnit)) with
+          (fill [(IfCtx EError (EVal VUnit)); (OpCtxL EqOp (EVal (VNat 0)))] (EVal (VNat 0))).
+      constructor.
+      constructor.
+    + apply (steps_step
+             m m m
+             (EIf (EOp EqOp (EVal (VNat 0)) (EVal (VNat 0))) EError (EVal VUnit))
+             (EIf (EVal (VBool true)) EError (EVal VUnit))).
+      * change (EIf (EOp EqOp (EVal (VNat 0)) (EVal (VNat 0))) EError (EVal VUnit)) with
+            (fill [(IfCtx EError (EVal VUnit))] (EOp EqOp (EVal (VNat 0)) (EVal (VNat 0)))).
+        change (EIf (EVal (VBool true)) EError (EVal VUnit)) with
+            (fill [(IfCtx EError (EVal VUnit))] (EVal (VBool true))).
+        constructor.
+        constructor.
+        simpl.
+        reflexivity.
+      * apply steps_if_true.
+  - unfold is_error.
+    split; auto.
+    intros.
+    intro.
+    inversion H.
+Qed.
 
 
 Lemma foo (xs : list nat) :
