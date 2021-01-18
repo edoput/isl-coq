@@ -58,17 +58,13 @@ Compute example_push_back.
    error as we get a hold of a location that might be
    deallocated
  *)
-Definition client : expr -> expr :=
-  fun v =>
-    (ELet "x" (ELoad v)
-          (ESeq (push_back v) (* here the underlying storage for v might be moved *)
-                (EStore (EVar "x") (EVal (VNat 88))))). (* so using the previous location might fault *)
-
-Example example_client := client (EVal (VLoc 0)).
-Check example_client.
-Print example_client.
-Compute example_client.
-
+Definition client : expr :=
+    (ELet "w" (EAlloc (EVal (VNat 0)))
+          (ELet "v" (EAlloc (EVar "w"))
+                      
+    (ELet "x" (ELoad (EVar "v"))
+          (ESeq (push_back (EVar "v")) (* here the underlying storage for v might be moved *)
+                (EStore (EVar "x") (EVal (VNat 88))))))). (* so using the previous location might fault *)
 
 (* now that the syntax is defined and I have written
    down the examples from the paper the semantics of this
@@ -410,6 +406,26 @@ Proof.
     inversion H.
 Qed.
 
+Definition amb_bool := (EOp EqOp EAmb (EVal (VNat 0))).
+
+Lemma amb_is_ambiguous (b : bool) (m : mem) : steps amb_bool m (EVal (VBool b)) m.
+Proof.
+  apply (steps_step m m m
+                    (EOp EqOp EAmb (EVal (VNat 0)))
+                    (EOp EqOp (EVal (VNat (if b then 0 else 1))) (EVal (VNat 0)))).
+  rewrite <- 2 ! step_fill_op_l; constructor.
+  apply Amb_headstep.
+  eapply steps_step.
+  2: { eapply steps_refl. }.
+  rewrite <- fill_empty_context at 1.
+  change (EVal (VBool b)) with (fill [] (EVal (VBool b))).
+  constructor.
+  econstructor.
+  simpl.
+  do 2 apply f_equal.
+  destruct b; reflexivity.
+Qed.
+
 (* composing 0+ steps still yields 0+ steps *)
 Lemma steps_mono e e' e'' h h' h'':
   steps e h e' h' -> steps e' h' e'' h'' -> steps e h e'' h''.
@@ -430,31 +446,80 @@ Proof.
   eapply steps_mono; eassumption.
 Qed.
 
+Definition will_error (P : mem -> Prop) (e : expr) := ∃ h h' e', P h ∧ steps e h e' h' ∧ is_error e' h'.
+
+(* Notation "[[ P ]] e [[error]]" := (will_error P e). *)
+
+Definition reaches (P : mem -> Prop) (e : expr) (Q : val -> mem -> Prop) :=
+  ∀ v h', Q v h' -> exists h, P h ∧ steps e h (EVal v) h'.
+
+Notation "[ P ] e [[ v , Q ]]" := (reaches P e (fun v => Q)).
+
+Definition iEmpty (m : mem) := empty = m.
+
+Example b := ([ iEmpty ] amb_bool [[ x , iEmpty ]]).
+
+Definition under_approximation (P : mem -> Prop) (e : expr) (Q : val -> mem -> Prop) :=
+  will_error P e \/ reaches P e Q.
+
+Lemma client_can_error : will_error iEmpty client.
+Proof.
+  unfold will_error, client.
+  exists empty.
+  (* {[ 0 := (VNat 0) ]} ∪ {[ 1 := (VLoc 0) ]} ∪ {[ 2 := (VNat 42) ]}. *)
+  exists ({[ 1 := (VLoc 2) ]} ∪ {[ 2 := (VNat 42) ]}).
+  exists (EStore (EVal (VLoc 0)) (EVal (VNat 88))).
+  split; [done |].
+  split.
+  - admit.
+  - unfold is_error.
+    split.
+    + auto.
+    + intros.
+      intro.
+      inversion H.
+      apply H5.
+      apply lookup_union_None.
+      split; apply lookup_singleton_ne; auto.
+Admitted.
+
 (*
 
 Question: which of these do we want?
 
-[P] e [v. Q v]_ERROR :=  (∃ h h' e', P h ∧ step e h e' h' ∧ is_stuck e') ∨ ∀ v h', Q v h' -> ∃ h, P h ∧ step e h (EVal v) h'
+[P] e [v. Q v]_ERROR :=  (∃ h h' e', P h ∧ step e h e' h' ∧ is_stuck e') ∨ (∀ v h', Q v h' -> ∃ h, P h ∧ step e h (EVal v) h')
 
-[P] e []_ERROR := ∃ h h' e', P h ∧ step e h e' h' ∧ is_stuck e'
+[P] e []_ERROR := ∃ h h' e', P h ∧ steps e h e' h' ∧ is_stuck e'
 
-[P] e [v. Q v] := ∀ v h', ∃ h, P h ∧ step e h EVal v h'
+[P] e [v. Q v] := ∀ v h', Q v h' -> exist h, P h ∧ steps e h (EVal v) h'
 
 Questions:
-- Maybe we only want #1 and #2, because #1 is weaker than #3, so it's easier to prove, but proving #1 is always sufficient, because if we are in the left disjunct, then we already proved our end goal. Question: is this reasoning correct?
-- Maybe we want #2 and #3, because that's what they do in the paper. Question: is that correct?
+- [x] Maybe we only want #1 and #2, because #1 is weaker than #3, so it's easier to prove, but proving #1 is always sufficient, because if we are in the left disjunct, then we already proved our end goal. Question: is this reasoning correct?
+- [x] Maybe we want #2 and #3, because that's what they do in the paper. Question: is that correct?
 - Why does the paper care about the final heap state if there is already an error?
 - Which proof rules are valid for the #1,#2,#3?
 - Edoardo's questions...
 
 Plan:
-- Try to answer the questions and add more questions
-- Prove that the push_back example has an error
-- Define #1,#2,#3 in Coq
-- Prove that the examples are incorrect accoring to #2
-- Define mfresh and prove that it gives something fresh
-- Come up with a good name for foo
-- Try and automate steps
+- [x] Try to answer the questions and add more questions
+- [x] Prove that the push_back example has an error
+- [x] Define #1,#2,#3 in Coq, define under-approximation triples [P] e []_ERROR, [P] e [v. Q v] and define [P] e [v. Q v]_ERROR using these primitives
+
+- [x] Define mfresh and prove that it gives something fresh
 - Get unicode working in emacs: https://gitlab.mpi-sws.org/iris/iris/-/blob/master/docs/editor.md
+- finish the proof that client has an error according to #2
+- start working on the assertion language
+  + separating conjunction
+  + separating implication
+  + points to
+  + pure
+  + conjunction
+  + disjunction
+- try to define the proof rules for ISL using the assertion language we have
+  + CONS
+  + SEQ
+  + DISJ
+  + more to come
+- prove the proof rules sound
 
 *)
