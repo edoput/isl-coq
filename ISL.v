@@ -266,7 +266,49 @@ Inductive steps : expr -> mem -> expr -> mem -> Prop :=
      steps e2 m2 e3 m3 ->
      steps e1 m1 e3 m3.
 
+Lemma steps_if_true e1 e2 m : steps (EIf (EVal (VBool true)) e1 e2) m e1 m.
+Proof.
+  apply (steps_step m m m (* no memory change in test *)
+                    (EIf (EVal (VBool true)) e1 e2) (* this one head reduces to the truth branch *)
+                    e1 (* then this one does not reduce to anything else yet *)
+                    e1).
+  rewrite <- fill_empty_context at 1.
+  rewrite <- (fill_empty_context e1) at 2.
+  constructor; eauto using head_step.
+  constructor.
+Qed.
 
+Lemma steps_if_false e1 e2 m : steps (EIf (EVal (VBool false)) e1 e2) m e2 m.
+Proof.
+  apply (steps_step m m m (* no memory change in test *)
+                    (EIf (EVal (VBool false)) e1 e2) (* this one head reduces to the truth branch *)
+                    e2 (* then this one does not reduce to anything else yet *)
+                    e2).
+  rewrite <- fill_empty_context at 1.
+  rewrite <- (fill_empty_context e2) at 2.
+  constructor; eauto using head_step.
+  constructor.
+Qed.
+
+(*
+Tactic Notation "steps_branch" :=
+  match goal with
+  | |- (steps (EIf t e1 _) _ e1 _)  =>
+    eapply (steps_step _ _ _
+        (EIf t e1 e2)
+        (EIf t' e1 e2)
+        (EIf (EVal (VBool true)) e1 e2) (* we know it must reduce this way otherwise e1 = e2 *)
+        e1)
+  end.
+
+Hint Extern 10 (steps (EIf t e1 e2) _ e1 _) =>
+eapply (steps_step _ _ _
+        (EIf t e1 e2)
+        (EIf t' e1 e2)
+        (EIf (EVal (VBool true)) e1 e2) (* we know it must reduce this way otherwise e1 = e2 *)
+        e1).
+
+*)
 (* now that we have the starting point of our operational semantic
    I can focus on what it means for an expression to be an error.
    All our examples are syntactically correct (or should be) and
