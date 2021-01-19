@@ -1,29 +1,30 @@
 From stdpp Require Export gmap.
+From iris.bi Require Import bi.
 
 Require Export Arith String List Omega.
 Export ListNotations.
 
 Inductive val : Type :=
 | VUnit : val
-| VBool : bool -> val
-| VNat : nat -> val
-| VLoc : nat -> val.
+| VBool : bool → val
+| VNat : nat → val
+| VLoc : nat → val.
 
 Inductive bin_op : Type :=
   | PlusOp | MinusOp | LeOp | LtOp | EqOp.
 
 Inductive expr : Type :=
-| EVar : string -> expr
-| EVal : val -> expr
-| ELet : string -> expr -> expr -> expr
-| ESeq : expr -> expr -> expr
-| EOp : bin_op -> expr -> expr -> expr
-| EIf : expr -> expr -> expr -> expr
-| EWhile: expr -> expr -> expr
-| EAlloc : expr -> expr
-| EFree : expr -> expr
-| ELoad : expr -> expr
-| EStore : expr -> expr -> expr
+| EVar : string → expr
+| EVal : val → expr
+| ELet : string → expr → expr → expr
+| ESeq : expr → expr → expr
+| EOp : bin_op → expr → expr → expr
+| EIf : expr → expr → expr → expr
+| EWhile: expr → expr → expr
+| EAlloc : expr → expr
+| EFree : expr → expr
+| ELoad : expr → expr
+| EStore : expr → expr → expr
 (* new *)
 | EAmb : expr
 | EError : expr.
@@ -39,7 +40,7 @@ Inductive expr : Type :=
    a use after free bug later on.
  *)
 
-Definition push_back : expr -> expr :=
+Definition push_back : expr → expr :=
   fun v =>
     (ELet "z" EAmb
           (EIf (EOp EqOp (EVar "z") (EVal (VNat 0)))
@@ -143,7 +144,7 @@ Proof.
 Qed.
 
 
-Inductive head_step : expr -> mem -> expr -> mem -> Prop :=
+Inductive head_step : expr → mem → expr → mem → Prop :=
   | Let_headstep m y e2 v1 :
      head_step (ELet y (EVal v1) e2) m (subst y v1 e2) m
   | Seq_headstep m e2 v1 :
@@ -155,19 +156,19 @@ Inductive head_step : expr -> mem -> expr -> mem -> Prop :=
   | While_headstep m e1 e2 :
      head_step (EWhile e1 e2) m (EIf e1 (ESeq e2 (EWhile e1 e2)) (EVal VUnit)) m
   | Op_headstep m op v1 v2 v :
-     eval_bin_op op v1 v2 = Some v ->
+     eval_bin_op op v1 v2 = Some v →
      head_step (EOp op (EVal v1) (EVal v2)) m (EVal v) m
   | Alloc_headstep m v l:
-     lookup l m = None ->
+     lookup l m = None →
      head_step (EAlloc (EVal v)) m (EVal (VLoc l)) (insert l v m)
   | Free_headstep m l :
-     lookup l m <> None ->
+     lookup l m <> None →
      head_step (EFree (EVal (VLoc l))) m (EVal VUnit) (delete l m)
   | Load_headstep m l v :
-     lookup l m = (Some v) ->
+     lookup l m = (Some v) →
      head_step (ELoad (EVal (VLoc l))) m (EVal v) m
   | Store_headstep m l v :
-     lookup l m <> None ->
+     lookup l m <> None →
      head_step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (alter (fun _ => v) l m)
   (* new : the ambiguos expression reduces to any natural number *)
   | Amb_headstep m (n : nat):
@@ -181,7 +182,7 @@ Inductive head_step : expr -> mem -> expr -> mem -> Prop :=
  *)
 
 Lemma Alloc_fresh_headstep m l v:
-      l = (memfresh m) ->
+      l = (memfresh m) →
       head_step (EAlloc (EVal v)) m (EVal (VLoc l)) (insert l v m).
 Proof.
   intros ->.
@@ -193,16 +194,16 @@ Create HintDb head_step.
 Hint Constructors head_step : head_step.
 
 Inductive ctx_item : Type :=
-  | LetCtx : string -> expr -> ctx_item
-  | SeqCtx : expr -> ctx_item
-  | OpCtxL : bin_op -> expr -> ctx_item
-  | OpCtxR : bin_op -> val -> ctx_item
-  | IfCtx : expr -> expr -> ctx_item
+  | LetCtx : string → expr → ctx_item
+  | SeqCtx : expr → ctx_item
+  | OpCtxL : bin_op → expr → ctx_item
+  | OpCtxR : bin_op → val → ctx_item
+  | IfCtx : expr → expr → ctx_item
   | AllocCtx : ctx_item
   | FreeCtx : ctx_item
   | LoadCtx : ctx_item
-  | StoreCtxL : expr -> ctx_item
-  | StoreCtxR : val -> ctx_item.
+  | StoreCtxL : expr → ctx_item
+  | StoreCtxR : val → ctx_item.
 
 Notation ctx := (list ctx_item).
 
@@ -226,9 +227,9 @@ Fixpoint fill (E : ctx) (e : expr) : expr :=
   | E1 :: E2 => fill_item E1 (fill E2 e)
   end.
 
-Inductive step : expr -> mem -> expr -> mem -> Prop :=
+Inductive step : expr → mem → expr → mem → Prop :=
   | do_step E m1 m2 e1 e2 :
-     head_step e1 m1 e2 m2 ->
+     head_step e1 m1 e2 m2 →
      step (fill E e1) m1 (fill E e2) m2.
 
 (* Let's look at some automation for goals of shape step L m L' m' *)
@@ -254,12 +255,12 @@ Proof.
   debug eauto with step head_step.
   Qed.
 
-Inductive steps : expr -> mem -> expr -> mem -> Prop :=
+Inductive steps : expr → mem → expr → mem → Prop :=
   | steps_refl m e :
      steps e m e m
   | steps_step m1 m2 m3 e1 e2 e3 :
-     step e1 m1 e2 m2 ->
-     steps e2 m2 e3 m3 ->
+     step e1 m1 e2 m2 →
+     steps e2 m2 e3 m3 →
      steps e1 m1 e3 m3.
 
 Lemma steps_if_true e1 e2 m : steps (EIf (EVal (VBool true)) e1 e2) m e1 m.
@@ -289,7 +290,7 @@ Qed.
 (*
 Tactic Notation "steps_branch" :=
   match goal with
-  | |- (steps (EIf t e1 _) _ e1 _)  =>
+  | ⊢ (steps (EIf t e1 _) _ e1 _)  =>
     eapply (steps_step _ _ _
         (EIf t e1 e2)
         (EIf t' e1 e2)
@@ -324,7 +325,7 @@ Definition is_val e :=
 
 (* This is our first attempt. an expression is an error when it's not
    a value and cannot be reduced anymore *)
-Definition is_error e h := not (is_val e) /\ forall e' h', not (head_step e h e' h').
+Definition is_error e h := not (is_val e) ∧ ∀ e' h', not (head_step e h e' h').
 
 
 Example simple_error := is_error EError ∅.
@@ -363,14 +364,14 @@ Qed.
    The alternative is that forall paths there is no error so we can now
    also describe correctness.
  *)
-Definition contains_error e h := exists e' h', steps e h e' h' /\ is_error e' h'.
+Definition contains_error e h := ∃ e' h', steps e h e' h' ∧ is_error e' h'.
 
 Example may_error :=
   (EIf (EOp EqOp EAmb (EVal (VNat 0)))
        EError
        (EVal VUnit)).
 
-Lemma may_error_contains_error : forall m,  contains_error may_error m.
+Lemma may_error_contains_error : ∀ m,  contains_error may_error m.
 Proof.
   unfold contains_error, may_error.
   intros.
@@ -429,7 +430,7 @@ Qed. *)
 
 (* composing 0+ steps still yields 0+ steps *)
 Lemma steps_mono e e' e'' h h' h'':
-  steps e h e' h' -> steps e' h' e'' h'' -> steps e h e'' h''.
+  steps e h e' h' → steps e' h' e'' h'' → steps e h e'' h''.
 Proof.
   intros.
   induction H, H0; eauto using steps.
@@ -437,7 +438,7 @@ Qed.
 
 (* if an error state is reachable in a sub-expression then we might get lucky *)
 Lemma contains_error_mono e e' h h' :
-  steps e h e' h' -> contains_error e' h' -> contains_error e h.
+  steps e h e' h' → contains_error e' h' → contains_error e h.
 Proof.
   intros.
   unfold contains_error in *.
@@ -447,12 +448,12 @@ Proof.
   eapply steps_mono; eassumption.
 Qed.
 
-Definition will_error (P : mem -> Prop) (e : expr) := ∃ h h' e', P h ∧ steps e h e' h' ∧ is_error e' h'.
+Definition will_error (P : mem → Prop) (e : expr) := ∃ h h' e', P h ∧ steps e h e' h' ∧ is_error e' h'.
 
 (* Notation "[[ P ]] e [[error]]" := (will_error P e). *)
 
-Definition reaches (P : mem -> Prop) (e : expr) (Q : val -> mem -> Prop) :=
-  ∀ v h', Q v h' -> exists h, P h ∧ steps e h (EVal v) h'.
+Definition reaches (P : mem → Prop) (e : expr) (Q : val → mem → Prop) :=
+  ∀ v h', Q v h' → ∃ h, P h ∧ steps e h (EVal v) h'.
 
 Notation "[ P ] e [[ v , Q ]]" := (reaches P e (fun v => Q)).
 
@@ -460,8 +461,8 @@ Definition iEmpty (m : mem) := empty = m.
 
 Example b := ([ iEmpty ] amb_bool [[ x , iEmpty ]]).
 
-Definition under_approximation (P : mem -> Prop) (e : expr) (Q : val -> mem -> Prop) :=
-  will_error P e \/ reaches P e Q.
+Definition under_approximation (P : mem → Prop) (e : expr) (Q : val → mem → Prop) :=
+  will_error P e ∨ reaches P e Q.
 
 Lemma client_can_error : will_error iEmpty client.
 Proof.
@@ -484,15 +485,106 @@ Proof.
       split; apply lookup_singleton_ne; auto.
 Admitted.
 
-Definition iProp := mem -> Prop.
+Definition iProp := mem → Prop.
 Definition iEmp : iProp := λ m, m = ∅.
 Definition iPoints (l : nat) (v : val) : iProp := λ m, m = {[ l := v ]}.
-Definition iSep (P Q : iProp) : iProp := λ m, ∃ m1 m2, m = m1 ∪ m2 ∧ m1 ##ₘ m2 ∧ P m1 ∧ Q m2.
-Definition iWand (P Q : iProp) : iProp := λ m, ∀ m', m ##ₘ m' → P m' → Q (m ∪ m').
-Definition iForall {A} (P : A -> iProp) : iProp := λ m, ∀ x, P x m.
-Definition iExists {A} (P : A -> iProp) : iProp := λ m, ∃ x, P x m.
-Definition iPure (φ : Prop) : iProp := λ _, φ.
+Definition iSep (P Q : iProp) : iProp := λ m, ∃ m1 m2, P m1 ∧ Q m2 ∧ m = m1 ∪ m2 ∧ m1 ##ₘ m2 .
+Definition iWand (P Q : iProp) : iProp := λ m, ∀ m', m ##ₘ m' → P m' → Q (m' ∪ m).
+Definition iForall {A} (P : A → iProp) : iProp := λ m, ∀ x, P x m.
+Definition iExists {A} (P : A → iProp) : iProp := λ m, ∃ x, P x m.
+Definition iPure (φ : Prop) : iProp := λ m, φ ∧ m = ∅.
 Definition iEntails (P Q : iProp) : Prop := ∀ m, P m → Q m.
+
+Notation "P ⊢ Q" := (iEntails P Q) (at level 99, Q at level 200).
+Notation "P ∗ Q" := (iSep P Q) (at level 80, right associativity).
+Notation "l ↦ v" := (iPoints l v) (at level 20).
+Notation "'emp'" := iEmp.
+Notation "P -∗ Q" := (iWand P Q) (at level 99, Q at level 200, right associativity).
+Notation "⌜ p ⌝" := (iPure p) (at level 1, p at level 200).
+Notation "'All' x1 .. xn , P" :=
+  (iForall (fun x1 => .. (iForall (fun xn => P)) ..))
+  (at level 200, x1 binder, xn binder, right associativity).
+Notation "'Ex' x1 .. xn , P" :=
+  (iExists (fun x1 => .. (iExists (fun xn => P)) ..))
+  (at level 200, x1 binder, xn binder, right associativity).
+
+
+Ltac iUnfold := unfold iEmp, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails.
+Ltac duh := iUnfold;
+  naive_solver (
+    rewrite ?map_union_assoc ?left_id ?right_id;
+    simplify_map_eq;
+    try apply map_union_comm;
+    solve_map_disjoint).
+
+(* The following lemma statements are from Robbert's exercises *)
+
+Lemma iEntails_refl P : P ⊢ P.
+Proof. duh. Qed.
+
+Lemma iEntails_trans P Q R : (P ⊢ Q) → (Q ⊢ R) → (P ⊢ R).
+Proof. duh. Qed.
+
+Lemma iSep_mono_l P1 P2 Q : (P1 ⊢ P2) → P1 ∗ Q ⊢ P2 ∗ Q.
+Proof. duh. Qed.
+
+Lemma iSep_comm P Q : P ∗ Q ⊢ Q ∗ P.
+Proof. duh. Qed.
+
+Lemma iSep_assoc P Q R : P ∗ (Q ∗ R) ⊢ (P ∗ Q) ∗ R.
+Proof. duh. Qed.
+
+Lemma iSep_emp_l P : P ⊢ emp ∗ P.
+Proof. duh. Qed.
+
+Lemma iSep_emp_l_inv P : emp ∗ P ⊢ P.
+Proof. duh. Qed.
+
+Lemma iWand_intro_r P Q R : (P ∗ Q ⊢ R) → P ⊢ Q -∗ R.
+Proof. duh. Qed.
+
+Lemma iWand_elim P Q : P ∗ (P -∗ Q) ⊢ Q.
+Proof. duh. Qed.
+
+Lemma iForall_intro {A} P (Q : A → iProp) : (∀ x, P ⊢ Q x) → (P ⊢ All x, Q x).
+Proof. duh. Qed.
+
+Lemma iForall_elim {A} (P : A → iProp) x : (All z, P z) ⊢ P x.
+Proof. duh. Qed.
+
+Lemma iExist_intro {A} (P : A → iProp) x : P x ⊢ Ex z, P z.
+Proof. duh. Qed.
+
+Lemma iExist_elim {A} (P : A → iProp) Q :  (∀ x, P x ⊢ Q) → (Ex z, P z) ⊢ Q.
+Proof. duh. Qed.
+
+Lemma iSep_emp_r P : P ⊢ P ∗ emp.
+Proof. duh. Qed.
+
+Lemma iSep_emp_r_inv P : P ∗ emp ⊢ P.
+Proof. duh. Qed.
+
+Lemma iSep_mono_r P Q1 Q2 : (Q1 ⊢ Q2) → P ∗ Q1 ⊢ P ∗ Q2.
+Proof. duh. Qed.
+
+Lemma iSep_mono P1 P2 Q1 Q2 : (P1 ⊢ P2) → (Q1 ⊢ Q2) → P1 ∗ Q1 ⊢ P2 ∗ Q2.
+Proof. duh. Qed.
+
+Lemma iSep_assoc' P Q R : (P ∗ Q) ∗ R ⊢ P ∗ (Q ∗ R).
+Proof. intros ? (? & ? & (? & ? & ?) & ?); repeat eexists; duh. Qed.
+
+Lemma iWand_intro_l P Q R : (Q ∗ P ⊢ R) → P ⊢ Q -∗ R.
+Proof. duh. Qed.
+
+Lemma iExist_sep {A} (P : A → iProp) Q : (Ex x, P x) ∗ Q ⊢ Ex x, P x ∗ Q.
+Proof. duh. Qed.
+
+Lemma iPure_intro (φ : Prop) : φ → emp ⊢ ⌜ φ ⌝.
+Proof. duh. Qed.
+
+Lemma iPure_elim (φ : Prop) P Q : (φ → P ⊢ Q) → ⌜ φ ⌝ ∗ P ⊢ Q.
+Proof. duh. Qed.
+
 
 (*
   Intuitively, (iReaches P e v) means that:
@@ -532,11 +624,11 @@ Proof. split; intros (m1 & m2 & ?); by exists m2,m1. Qed.
 
 Question: which of these do we want?
 
-[P] e [v. Q v]_ERROR :=  (∃ h h' e', P h ∧ step e h e' h' ∧ is_stuck e') ∨ (∀ v h', Q v h' -> ∃ h, P h ∧ step e h (EVal v) h')
+[P] e [v. Q v]_ERROR :=  (∃ h h' e', P h ∧ step e h e' h' ∧ is_stuck e') ∨ (∀ v h', Q v h' → ∃ h, P h ∧ step e h (EVal v) h')
 
 [P] e []_ERROR := ∃ h h' e', P h ∧ steps e h e' h' ∧ is_stuck e'
 
-[P] e [v. Q v] := ∀ v h', Q v h' -> exist h, P h ∧ steps e h (EVal v) h'
+[P] e [v. Q v] := ∀ v h', Q v h' → exist h, P h ∧ steps e h (EVal v) h'
 
 Questions:
 - [x] Maybe we only want #1 and #2, because #1 is weaker than #3, so it's easier to prove, but proving #1 is always sufficient, because if we are in the left disjunct, then we already proved our end goal. Question: is this reasoning correct?
@@ -553,18 +645,19 @@ Plan:
 - [x] Define mfresh and prove that it gives something fresh
 - Get unicode working in emacs: https://gitlab.mpi-sws.org/iris/iris/-/blob/master/docs/editor.md
 - finish the proof that client has an error according to #2
-- start working on the assertion language
-  + separating conjunction
-  + separating implication
-  + points to
-  + pure
-  + conjunction
-  + disjunction
+- [x] start working on the assertion language
+  + [x] separating conjunction
+  + [x] separating implication
+  + [x] points to
+  + [x] pure
+  + [x] forall
+  + [x] exists
 - try to define the proof rules for ISL using the assertion language we have
   + CONS
   + SEQ
   + DISJ
   + more to come
 - prove the proof rules sound
+- figure out how to write the ISL Hoare triples in WP-style
 
 *)
