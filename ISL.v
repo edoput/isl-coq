@@ -242,10 +242,10 @@ Proof. auto. Qed.
 Create HintDb step.
 (* but for more specialized forms we can keep going *)
 
-Lemma step_fill_let s e1 e2 : (fill [(LetCtx s e2)] e1) = (ELet s e1 e2).
+Lemma fill_let s e1 e2 : (fill [(LetCtx s e2)] e1) = (ELet s e1 e2).
 Proof. auto. Qed.
 
-Hint Extern 10 (step (ELet _ _ _) _ (ELet _ _ _) _) => rewrite <- 2 ! step_fill_let; econstructor : step.
+Hint Extern 10 (step (ELet _ _ _) _ (ELet _ _ _) _) => rewrite <- 2 ! fill_let; econstructor : step.
 
 (* let's try our automation *)
 Lemma foo s : step (ELet s (EOp PlusOp (EVal (VNat 1)) (EVal (VNat 1)))
@@ -253,7 +253,13 @@ Lemma foo s : step (ELet s (EOp PlusOp (EVal (VNat 1)) (EVal (VNat 1)))
                    (ELet s (EVal (VNat 2)) (EVar s)) empty.
 Proof.
   debug eauto with step head_step.
-  Qed.
+Qed.
+
+Lemma fill_if t e1 e2 : (fill [(IfCtx e1 e2)] t) = (EIf t e1 e2).
+Proof. auto. Qed.
+
+Lemma fill_op_l f e1 e2 : (fill [(OpCtxL f e2)] e1) = (EOp f e1 e2).
+Proof. auto. Qed.
 
 Inductive steps : expr → mem → expr → mem → Prop :=
   | steps_refl m e :
@@ -263,49 +269,114 @@ Inductive steps : expr → mem → expr → mem → Prop :=
      steps e2 m2 e3 m3 →
      steps e1 m1 e3 m3.
 
+(* composing 0+ steps still yields 0+ steps *)
+Lemma steps_mono e e' e'' h h' h'':
+  steps e h e' h' → steps e' h' e'' h'' → steps e h e'' h''.
+Proof.
+  intros.
+  induction H, H0; eauto using steps.
+Qed.
+
+(* now everything is nice and dandy and we can compose things nicely
+   but I cannot take a steps reduction and shove it somewhere in the AST;
+   steps reduction always start at the top of the AST. This is a limitation
+   because during my proof construction I need to reason about sub-expressions
+   and eventually construct a bigger reduction from a smaller reduction, e.g.
+   for a If expression I cannot say much until I reason about the test but
+   I can only manipulate a steps expression at the top node, the If.
+ *)
+
+Lemma context_composition e E E': fill E (fill E' e) = fill (E ++ E') e.
+Proof.
+  induction E.
+  - auto using app_nil_l, fill_empty_context.
+  - simpl. apply f_equal. assumption.
+Qed.
+
+Lemma step_context e e' m m' E :
+  step e m e' m' → step (fill E e) m (fill E e') m'.
+Proof.
+  intro.
+  destruct H.
+  rewrite -> 2 context_composition.
+  constructor.
+  assumption.
+Qed.
+
+Lemma steps_context e e' h h' E :
+  steps e h e' h' → steps (fill E e) h (fill E e') h'.
+Proof.
+  intro.
+  induction H.
+  constructor.
+  eapply (steps_mono (fill E e1) (fill E e2) (fill E e3) m1 m2 m3).
+  - econstructor.
+    eauto using step_context.
+    apply steps_refl.
+  - assumption.
+Qed.
+
+(* very good now we can reduce left and right with as many steps as we may need
+   so here are some nice reduction we might need from now on *)
 Lemma steps_if_true e1 e2 m : steps (EIf (EVal (VBool true)) e1 e2) m e1 m.
 Proof.
-  apply (steps_step m m m (* no memory change in test *)
-                    (EIf (EVal (VBool true)) e1 e2) (* this one head reduces to the truth branch *)
-                    e1 (* then this one does not reduce to anything else yet *)
-                    e1).
-  rewrite <- fill_empty_context at 1.
-  rewrite <- (fill_empty_context e1) at 2.
-  constructor; eauto using head_step.
+  econstructor.
+  rewrite <- (fill_empty_context (EIf (EVal (VBool true)) e1 e2)).
   constructor.
+  eauto using head_step.
+  rewrite fill_empty_context.
+  constructor.
+Qed.
+
+Lemma steps_if_true' t e1 e2 m : steps t m (EVal (VBool true)) m →
+                                 steps (EIf t e1 e2) m e1 m.
+Proof.
+  intro.
+  apply (steps_mono (EIf t e1 e2) (EIf (EVal (VBool true)) e1 e2) e1 m m m).
+  - rewrite <- 2 fill_if; apply steps_context; assumption.
+  - apply steps_if_true.
 Qed.
 
 Lemma steps_if_false e1 e2 m : steps (EIf (EVal (VBool false)) e1 e2) m e2 m.
 Proof.
-  apply (steps_step m m m (* no memory change in test *)
-                    (EIf (EVal (VBool false)) e1 e2) (* this one head reduces to the truth branch *)
-                    e2 (* then this one does not reduce to anything else yet *)
-                    e2).
-  rewrite <- fill_empty_context at 1.
-  rewrite <- (fill_empty_context e2) at 2.
-  constructor; eauto using head_step.
+  econstructor.
+  rewrite <- (fill_empty_context (EIf (EVal (VBool false)) e1 e2)).
   constructor.
+  eauto using head_step.
+  rewrite fill_empty_context.
+  constructor.  
 Qed.
 
-(*
-Tactic Notation "steps_branch" :=
-  match goal with
-  | ⊢ (steps (EIf t e1 _) _ e1 _)  =>
-    eapply (steps_step _ _ _
-        (EIf t e1 e2)
-        (EIf t' e1 e2)
-        (EIf (EVal (VBool true)) e1 e2) (* we know it must reduce this way otherwise e1 = e2 *)
-        e1)
-  end.
+Lemma steps_if_false' t e1 e2 m : steps t m (EVal (VBool false)) m →
+                                 steps (EIf t e1 e2) m e2 m.
+Proof.
+  intro.
+  apply (steps_mono (EIf t e1 e2) (EIf (EVal (VBool false)) e1 e2) e2 m m m).
+  - rewrite <- 2 fill_if; apply steps_context; assumption.
+  - apply steps_if_false.
+Qed.
 
-Hint Extern 10 (steps (EIf t e1 e2) _ e1 _) =>
-eapply (steps_step _ _ _
-        (EIf t e1 e2)
-        (EIf t' e1 e2)
-        (EIf (EVal (VBool true)) e1 e2) (* we know it must reduce this way otherwise e1 = e2 *)
-        e1).
+(* as long as there is no errors when evaluating the binding [(s e1)] then
+   we know that the value of v can be substituted along in expression e2 *)
+Lemma steps_let_val e m s (v : val):
+  steps (ELet s (EVal v) e) m (subst s v e) m.
+Proof.
+  - econstructor.
+    rewrite <- (fill_empty_context (ELet s (EVal v) e)).
+    do 2 econstructor.
+    rewrite fill_empty_context.
+    econstructor.
+Qed.
 
-*)
+Lemma steps_let_val' e1 e2 m m' s (v : val):
+  steps e1 m (EVal v) m' → steps (ELet s e1 e2) m (subst s v e2) m'.
+Proof.
+  intro.
+  apply (steps_mono (ELet s e1 e2) (ELet s (EVal v) e2) (subst s v e2) m m' m').
+  - rewrite <- 2 fill_let; apply steps_context; assumption.
+  - apply steps_let_val.
+Qed.
+
 (* now that we have the starting point of our operational semantic
    I can focus on what it means for an expression to be an error.
    All our examples are syntactically correct (or should be) and
@@ -410,12 +481,11 @@ Qed.
 Definition amb_bool := (EOp EqOp EAmb (EVal (VNat 0))).
 
 Lemma amb_is_ambiguous (b : bool) (m : mem) : steps amb_bool m (EVal (VBool b)) m.
-Admitted.
-(* Proof.
+Proof.
   apply (steps_step m m m
                     (EOp EqOp EAmb (EVal (VNat 0)))
                     (EOp EqOp (EVal (VNat (if b then 0 else 1))) (EVal (VNat 0)))).
-  rewrite <- 2 ! step_fill_op_l; constructor.
+  rewrite <- 2 ! fill_op_l; constructor.
   apply Amb_headstep.
   eapply steps_step.
   2: { eapply steps_refl. }.
@@ -426,14 +496,6 @@ Admitted.
   simpl.
   do 2 apply f_equal.
   destruct b; reflexivity.
-Qed. *)
-
-(* composing 0+ steps still yields 0+ steps *)
-Lemma steps_mono e e' e'' h h' h'':
-  steps e h e' h' → steps e' h' e'' h'' → steps e h e'' h''.
-Proof.
-  intros.
-  induction H, H0; eauto using steps.
 Qed.
 
 (* if an error state is reachable in a sub-expression then we might get lucky *)
