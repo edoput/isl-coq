@@ -258,7 +258,13 @@ Qed.
 Lemma fill_if t e1 e2 : (fill [(IfCtx e1 e2)] t) = (EIf t e1 e2).
 Proof. auto. Qed.
 
+Lemma fill_seq e1 e2 : (fill [(SeqCtx e2)] e1) = (ESeq e1 e2).
+Proof. auto. Qed.
+
 Lemma fill_op_l f e1 e2 : (fill [(OpCtxL f e2)] e1) = (EOp f e1 e2).
+Proof. auto. Qed.
+
+Lemma fill_alloc e : (fill [AllocCtx] e) = (EAlloc e).
 Proof. auto. Qed.
 
 Inductive steps : expr → mem → expr → mem → Prop :=
@@ -268,6 +274,17 @@ Inductive steps : expr → mem → expr → mem → Prop :=
      step e1 m1 e2 m2 →
      steps e2 m2 e3 m3 →
      steps e1 m1 e3 m3.
+
+Lemma steps_single e e' m m' : head_step e m e' m' → steps e m e' m'.
+Proof.
+  intros.
+  eapply steps_step.
+  rewrite <- (fill_empty_context e).
+  econstructor.
+  eassumption.
+  rewrite fill_empty_context.
+  apply steps_refl.
+Qed.
 
 (* composing 0+ steps still yields 0+ steps *)
 Lemma steps_mono e e' e'' h h' h'':
@@ -376,6 +393,27 @@ Proof.
   - rewrite <- 2 fill_let; apply steps_context; assumption.
   - apply steps_let_val.
 Qed.
+
+Lemma steps_seq_val e e' v m m':
+  steps e m e' m' → steps (ESeq (EVal v) e) m e' m'.
+Proof.
+  econstructor.
+  rewrite <- (fill_empty_context (ESeq (EVal v) e)).
+  econstructor.
+  eauto with head_step.
+  rewrite fill_empty_context.
+  assumption.
+Qed.
+
+Lemma steps_seq_val' e e' e'' m m' m'' (v : val):
+  steps e m (EVal v) m' → steps e' m' e'' m'' → steps (ESeq e e') m e'' m''.
+Proof.
+  intros.
+  apply (steps_mono (ESeq e e') (ESeq (EVal v) e') e'' m m' m'').
+  - rewrite <- 2 fill_seq; apply steps_context; assumption.
+  - auto using steps_seq_val.
+Qed.    
+
 
 (* now that we have the starting point of our operational semantic
    I can focus on what it means for an expression to be an error.
@@ -535,7 +573,56 @@ Proof.
   exists (EStore (EVal (VLoc 0)) (EVal (VNat 88))).
   split; [done |].
   split.
-  - admit.
+  - eapply steps_mono.
+    eapply steps_let_val'.
+    + apply steps_single.
+      apply (Alloc_headstep ∅ (VNat 0) 0).
+      auto using lookup_nil.
+    + rewrite insert_empty.
+      simpl subst.
+      eapply steps_mono.
+      eapply steps_let_val'.
+      * apply steps_single.
+        apply (Alloc_headstep {[0:= (VNat 0)]} (VLoc 0) 1).
+        eapply lookup_insert_None; eauto using lookup_nil.
+      * simpl subst.
+        rewrite insert_union_singleton_l.
+        eapply steps_mono.
+        eapply steps_let_val'.
+        -- apply steps_single.
+           econstructor.
+           eapply lookup_union_Some; auto.
+           rewrite map_disjoint_singleton_l. auto using lookup_singleton_None.
+        -- simpl subst.
+           eapply steps_seq_val'.
+           ++ eapply steps_mono.
+              eapply steps_let_val'.
+              ** apply steps_single.
+                 apply (Amb_headstep ({[1 := VLoc 0]} ∪ {[0 := VNat 0]}) 1).
+              ** simpl subst.
+                 eapply steps_mono.
+                 apply steps_if_false'.
+                 --- auto using steps_single, head_step.
+                 --- eapply steps_mono. apply steps_let_val'.
+                     +++ auto using steps_single, head_step.
+                     +++ simpl subst.
+                         eapply steps_seq_val'.
+                         *** auto using steps_single, head_step.
+                         *** eapply steps_mono.
+                             ---- apply steps_let_val'.
+                                  apply steps_single.
+                                  rewrite delete_union.
+                                  rewrite delete_singleton.
+                                  rewrite delete_singleton_ne; auto.
+                                  rewrite RightId_instance_2.
+                                  auto using (Alloc_headstep {[1 := VLoc 0]} (VNat 42) 2), lookup_singleton_ne.
+                             ---- simpl subst.
+                                  apply steps_single.
+                                  auto using head_step.
+           ++ rewrite insert_union_singleton_l.
+              rewrite <- map_union_comm.
+              ** admit.
+              ** rewrite map_disjoint_singleton_l. auto using lookup_singleton_None.
   - unfold is_error.
     split.
     + auto.
@@ -707,6 +794,7 @@ Plan:
 - [x] Define mfresh and prove that it gives something fresh
 - Get unicode working in emacs: https://gitlab.mpi-sws.org/iris/iris/-/blob/master/docs/editor.md
 - finish the proof that client has an error according to #2
+  + [ ] map_alter must have a theorem for union of maps, look it up
 - [x] start working on the assertion language
   + [x] separating conjunction
   + [x] separating implication
