@@ -520,20 +520,14 @@ Definition amb_bool := (EOp EqOp EAmb (EVal (VNat 0))).
 
 Lemma amb_is_ambiguous (b : bool) (m : mem) : steps amb_bool m (EVal (VBool b)) m.
 Proof.
-  apply (steps_step m m m
-                    (EOp EqOp EAmb (EVal (VNat 0)))
-                    (EOp EqOp (EVal (VNat (if b then 0 else 1))) (EVal (VNat 0)))).
-  rewrite <- 2 ! fill_op_l; constructor.
-  apply Amb_headstep.
+  unfold amb_bool.
   eapply steps_step.
-  2: { eapply steps_refl. }.
-  rewrite <- fill_empty_context at 1.
-  change (EVal (VBool b)) with (fill [] (EVal (VBool b))).
+  rewrite <- fill_op_l.
   constructor.
-  econstructor.
-  simpl.
-  do 2 apply f_equal.
-  destruct b; reflexivity.
+  apply (Amb_headstep m (if b then 0 else 1)).
+  rewrite fill_op_l.
+  apply steps_single.
+  destruct b; auto using head_step.
 Qed.
 
 (* if an error state is reachable in a sub-expression then we might get lucky *)
