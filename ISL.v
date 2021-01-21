@@ -608,7 +608,7 @@ Proof.
                                   rewrite delete_union.
                                   rewrite delete_singleton.
                                   rewrite delete_singleton_ne; auto.
-                                  rewrite RightId_instance_2.
+                                  rewrite map_union_empty.
                                   auto using (Alloc_headstep {[1 := VLoc 0]} (VNat 42) 2), lookup_singleton_ne.
                              ---- simpl subst.
                                   apply steps_single.
@@ -786,8 +786,8 @@ Plan:
 - [x] Define #1,#2,#3 in Coq, define under-approximation triples [P] e []_ERROR, [P] e [v. Q v] and define [P] e [v. Q v]_ERROR using these primitives
 
 - [x] Define mfresh and prove that it gives something fresh
-- Get unicode working in emacs: https://gitlab.mpi-sws.org/iris/iris/-/blob/master/docs/editor.md
-- finish the proof that client has an error according to #2
+- [x] Get unicode working in emacs: https://gitlab.mpi-sws.org/iris/iris/-/blob/master/docs/editor.md
+- [ ] finish the proof that client has an error according to #2
   + [ ] map_alter must have a theorem for union of maps, look it up
 - [x] start working on the assertion language
   + [x] separating conjunction
