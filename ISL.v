@@ -169,7 +169,7 @@ Inductive head_step : expr → mem → expr → mem → Prop :=
      head_step (ELoad (EVal (VLoc l))) m (EVal v) m
   | Store_headstep m l v :
      lookup l m <> None →
-     head_step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (alter (fun _ => v) l m)
+     head_step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[ l := v ]> m)
   (* new : the ambiguos expression reduces to any natural number *)
   | Amb_headstep m (n : nat):
      head_step EAmb m (EVal (VNat n)) m.
@@ -361,7 +361,7 @@ Proof.
   constructor.
   eauto using head_step.
   rewrite fill_empty_context.
-  constructor.  
+  constructor.
 Qed.
 
 Lemma steps_if_false' t e1 e2 m : steps t m (EVal (VBool false)) m →
@@ -412,7 +412,7 @@ Proof.
   apply (steps_mono (ESeq e e') (ESeq (EVal v) e') e'' m m' m'').
   - rewrite <- 2 fill_seq; apply steps_context; assumption.
   - auto using steps_seq_val.
-Qed.    
+Qed.
 
 
 (* now that we have the starting point of our operational semantic
@@ -611,10 +611,11 @@ Proof.
                              ---- simpl subst.
                                   apply steps_single.
                                   auto using head_step.
-           ++ rewrite insert_union_singleton_l.
-              rewrite <- map_union_comm.
-              ** admit.
-              ** rewrite map_disjoint_singleton_l. auto using lookup_singleton_None.
+           ++ rewrite insert_commute; eauto.
+              rewrite insert_singleton.
+              rewrite insert_union_singleton_r.
+              2: { rewrite lookup_singleton_ne; eauto. }
+              eapply steps_refl.
   - unfold is_error.
     split.
     + auto.
@@ -624,7 +625,7 @@ Proof.
       apply H5.
       apply lookup_union_None.
       split; apply lookup_singleton_ne; auto.
-Admitted.
+Qed.
 
 Definition iProp := mem → Prop.
 Definition iEmp : iProp := λ m, m = ∅.
