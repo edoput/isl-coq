@@ -794,7 +794,6 @@ Proof.
   edestruct (Hwp (m ∪ mf)) as (m0 & Hdisj'' & Hp & Hsteps).
   { solve_map_disjoint. }
   exists (m0 ∪ m).
-  (* eexists. *)
   split. { solve_map_disjoint. }
   split. {
     do 2 eexists.
@@ -929,15 +928,17 @@ Proof.
   eauto using steps_single, head_step.
 Qed.
 
-
-
-Lemma wp_error v :
-  ⌜ true ⌝ ⊢ wp EError ⌜ true ⌝ v.
+Lemma wp_error P :
+  P ⊢ iError P EError.
 Proof.
-  intros m H mf Hdisj.
-  exists m.
+  iUnfold.
+  intros m Hp.
+  do 2 eexists. split; eauto.
+  split. { apply steps_refl. }
   split; auto.
-  split; auto.
+  intros ???H. inversion H.
+Qed.
+
 (*
 
 Question: which of these do we want?
