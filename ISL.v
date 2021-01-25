@@ -778,11 +778,35 @@ Definition wp (e : expr) (P : iProp) (v : val) : iProp :=
    this makes it possible to compose more _wp_ in the context while this one
    does not work.
 *)
-  λ m', ∀ mf, m' ##ₘ mf → (∃ m, m ##ₘ mf ∧ P m ∧ steps e m (EVal v) m').
+  λ m', ∀ mf, m' ##ₘ mf → (∃ m, m ##ₘ mf ∧ P m ∧ steps e (m ∪ mf) (EVal v) (m' ∪ mf)).
 (*
    The important part of this is the m ##ₘ mf as it says there exists
    an anti-frame from which to start
 *)
+
+
+Lemma wp_frame P Q e v :
+  Q ∗ wp e P v ⊢ wp e (Q ∗ P) v.
+Proof.
+  iUnfold.
+  intros mT (m & m' & Hq & Hwp & -> & Hdisj) mf Hdisj'.
+  unfold wp in *.
+  edestruct (Hwp (m ∪ mf)) as (m0 & Hdisj'' & Hp & Hsteps).
+  { solve_map_disjoint. }
+  exists (m0 ∪ m).
+  (* eexists. *)
+  split. { solve_map_disjoint. }
+  split. {
+    do 2 eexists.
+    split; first done.
+    split; first done.
+    split. { rewrite map_union_comm; solve_map_disjoint. }
+    solve_map_disjoint.
+  }
+  rewrite !assoc in Hsteps.
+  replace (m ∪ m') with (m' ∪ m); first done.
+  rewrite map_union_comm; solve_map_disjoint.
+Qed.
 
 (* the incorrectness triple is valid if for any state describe by (Q v)
    we can reach it from a state in P after executing P under final value v.
@@ -904,6 +928,8 @@ Proof.
   split; auto.
   eauto using steps_single, head_step.
 Qed.
+
+
 
 Lemma wp_error v :
   ⌜ true ⌝ ⊢ wp EError ⌜ true ⌝ v.
