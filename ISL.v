@@ -636,6 +636,7 @@ Definition iForall {A} (P : A → iProp) : iProp := λ m, ∀ x, P x m.
 Definition iExists {A} (P : A → iProp) : iProp := λ m, ∃ x, P x m.
 Definition iPure (φ : Prop) : iProp := λ m, φ ∧ m = ∅.
 Definition iEntails (P Q : iProp) : Prop := ∀ m, P m → Q m.
+Definition iOwn (m : mem) : iProp := λ m', m' = m.
 
 Notation "P ⊢ Q" := (iEntails P Q) (at level 99, Q at level 200).
 Notation "P ∗ Q" := (iSep P Q) (at level 80, right associativity).
@@ -744,6 +745,8 @@ Proof. reflexivity. Qed.
 
 Definition iError (P : iProp) (e : expr) : iProp :=
   λ m', ∃ m e', P m ∧ steps e m e' m' ∧ is_error e' m'.
+
+Definition has_error e := ∃ m, iOwn m ⊢ iError emp e.
 
 Definition will_error' (P : iProp) (e : expr) :=
   ∃ m', iError P e m'.
@@ -930,11 +933,10 @@ Plan:
 - [x] Try to answer the questions and add more questions
 - [x] Prove that the push_back example has an error
 - [x] Define #1,#2,#3 in Coq, define under-approximation triples [P] e []_ERROR, [P] e [v. Q v] and define [P] e [v. Q v]_ERROR using these primitives
-
 - [x] Define mfresh and prove that it gives something fresh
 - [x] Get unicode working in emacs: https://gitlab.mpi-sws.org/iris/iris/-/blob/master/docs/editor.md
-- [ ] finish the proof that client has an error according to #2
-  + [ ] map_alter must have a theorem for union of maps, look it up
+- [x] finish the proof that client has an error according to #2
+  + [x] map_alter must have a theorem for union of maps, look it up -> insert
 - [x] start working on the assertion language
   + [x] separating conjunction
   + [x] separating implication
@@ -942,6 +944,14 @@ Plan:
   + [x] pure
   + [x] forall
   + [x] exists
+- [ ] Make iError also have a frame
+- [ ] State the rule for wp while
+- [ ] Prove the rule for wp while
+- [ ] State the entailments for iError
+- [ ] Clean up this file
+   - [ ] Put some stuff in separate files
+   - [ ] Make naming consistent (wp/iReaches/iError)
+- [ ] Think about combining iReaches/iError
 - try to define the proof rules for ISL using the assertion language we have
   + CONS
   + SEQ
