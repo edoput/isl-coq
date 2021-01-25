@@ -948,6 +948,7 @@ Plan:
 - [ ] State the rule for wp while
 - [ ] Prove the rule for wp while
 - [ ] State the entailments for iError
+- [ ] Try to prove some of those entailments for iError
 - [ ] Clean up this file
    - [ ] Put some stuff in separate files
    - [ ] Make naming consistent (wp/iReaches/iError)
