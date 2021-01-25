@@ -475,14 +475,26 @@ Qed.
  *)
 Definition contains_error e h := ∃ e' h', steps e h e' h' ∧ is_error e' h'.
 
-Example may_error :=
-  (EIf (EOp EqOp EAmb (EVal (VNat 0)))
-       EError
-       (EVal VUnit)).
+Definition amb_bool := (EOp EqOp EAmb (EVal (VNat 0))).
+
+Lemma amb_is_ambiguous (b : bool) (m : mem) : steps amb_bool m (EVal (VBool b)) m.
+Proof.
+  unfold amb_bool.
+  eapply steps_step.
+  rewrite <- fill_op_l.
+  constructor.
+  apply (Amb_headstep m (if b then 0 else 1)).
+  rewrite fill_op_l.
+  apply steps_single.
+  destruct b; auto using head_step.
+Qed.
+
+
+Example may_error := (EIf amb_bool EError (EVal VUnit)).
 
 Lemma may_error_contains_error : ∀ m,  contains_error may_error m.
 Proof.
-  unfold contains_error, may_error.
+  unfold contains_error, may_error, amb_bool.
   intros.
   eexists EError, m.
   split.
@@ -514,20 +526,6 @@ Proof.
     intros.
     intro.
     inversion H.
-Qed.
-
-Definition amb_bool := (EOp EqOp EAmb (EVal (VNat 0))).
-
-Lemma amb_is_ambiguous (b : bool) (m : mem) : steps amb_bool m (EVal (VBool b)) m.
-Proof.
-  unfold amb_bool.
-  eapply steps_step.
-  rewrite <- fill_op_l.
-  constructor.
-  apply (Amb_headstep m (if b then 0 else 1)).
-  rewrite fill_op_l.
-  apply steps_single.
-  destruct b; auto using head_step.
 Qed.
 
 (* if an error state is reachable in a sub-expression then we might get lucky *)
@@ -759,10 +757,157 @@ Proof. split; intros (m1 & m2 & ?); by exists m2,m1. Qed.
   Maybe will_error should just be a Prop?
   Maybe it should have a postcondition like in the paper?
   Maybe you can take a look at how they do a complete proof using the rules in the paper.
-  Maybe that can be used to figure out how to do it using an analogue of WP in seplogic.
+  Maybe that can be used to figure out how to do it using an analogue of WP in incorrectness logic.
+ *)
+
+(* The path from the lectures does not work as we _need_ P here (in wp)
+   and definining hoare as P ⊢ wp P e Q obviously does not make all that sense;
+   this is why we need to figure out an alternative of WP in incorrectness logic.
+
+   Moreover we have to show that framing here happens in the reverse direction;
+   for any frame mf in our _result_ the same frame must happen in the _assume_
+   along with the correct anti-frame.
+ *)
+
+Definition wp (e : expr) (P : iProp) (v : val) : iProp :=
+(* first attempt:  notice how we have the _disjoint_ predicate on the first
+   this makes it possible to compose more _wp_ in the context while this one
+   does not work.
+*)
+  λ m', ∀ mf, m' ##ₘ mf → (∃ m, m ##ₘ mf ∧ P m ∧ steps e m (EVal v) m').
+(*
+   The important part of this is the m ##ₘ mf as it says there exists
+   an anti-frame from which to start
 *)
 
+(* the incorrectness triple is valid if for any state describe by (Q v)
+   we can reach it from a state in P after executing P under final value v.
 
+   Point wise entailment here represents the subset relation so (Q v) ⊂ wp e P v
+
+   NB this is still correct for Q v = false as no heap satisfies false *)
+Definition hoare (P : iProp) (e : expr) (Q : val -> iProp) v : Prop :=
+  (Q v) ⊢ (wp e P v).
+
+Lemma wp_val v (Q : val -> iProp) :
+  (Q v) ⊢ wp (EVal v) (Q v) v.
+Proof.
+  iUnfold.
+  intros.
+  unfold wp.
+  intros.
+  eexists m.
+  split; auto using steps_refl.
+Qed.
+
+(* how does this work with reducing anywhere in an expression? *)
+
+Lemma wp_ctx E e P v w :
+  wp (fill E (EVal w)) (wp e P w) v ⊢ wp (fill E e) P v.
+Proof.
+  unfold iEntails.
+  intros.
+  intros mf Hdisj.
+  unfold wp in H at 1.
+  specialize (H mf Hdisj) as (m' & Hdisj' & H' & Hsteps').
+  specialize (H' mf Hdisj') as (m'' & Hdisj'' & H'' & Hsteps'').
+  exists m''.
+  split; auto.
+  split; auto.
+  eapply steps_mono.
+  - apply steps_context.
+    eassumption.
+  - assumption.
+Qed.
+
+Lemma wp_let x v w e1 e2 P :
+  wp (subst x w e2) (wp e1 P w) v ⊢ wp (ELet x e1 e2) P v.
+Proof.
+  intros m H.
+  rewrite <- fill_let.
+  eapply wp_ctx.
+  simpl fill.
+  intros mf Hdisj.
+  destruct (H mf) as (m' & H' & Hdisj' & Hsteps); auto.
+  exists m'.
+  split; eauto.
+  split; eauto.
+  eapply steps_mono.
+  - apply steps_let_val'.
+    apply steps_refl.
+  - auto.
+Qed.
+
+Lemma wp_seq e1 e2 P w v:
+  wp e2 (wp e1 P w) v ⊢ wp (ESeq e1 e2) P v.
+Proof.
+  intros m H.
+  rewrite <- fill_seq.
+  eapply wp_ctx.
+  simpl fill.
+  intros mf Hdisj.
+  destruct (H mf) as (m' & H' & Hdisj' & Hsteps); auto.
+  exists m'.
+  split; eauto.
+  split; eauto.
+  eapply steps_mono.
+  - apply steps_seq_val.
+    apply steps_refl.
+  - assumption.
+Qed.
+
+Lemma wp_if_true t e1 e2 P v:
+  wp e1 (wp t P (VBool true)) v ⊢ wp (EIf t e1 e2) P v.
+Proof.
+  intros m H.
+  rewrite <- fill_if.
+  eapply wp_ctx.
+  simpl fill.
+  intros mf Hdisj.
+  destruct (H mf) as (m' & H' & Hdisj' & Hsteps); auto.
+  exists m'.
+  split; eauto.
+  split; eauto.
+  eapply steps_mono; auto using steps_if_true.
+Qed.
+
+Lemma wp_if_false t e1 e2 P v:
+  wp e2 (wp t P (VBool false)) v ⊢ wp (EIf t e1 e2) P v.
+Proof.
+  intros m H.
+  rewrite <- fill_if.
+  eapply wp_ctx.
+  simpl fill.
+  intros mf Hdisj.
+  destruct (H mf) as (m' & H' & Hdisj' & Hsteps); auto.
+  exists m'.
+  split; eauto.
+  split; eauto.
+  eapply steps_mono; auto using steps_if_false.
+Qed.
+
+(* Lemma wp_while *)
+
+(* as the binary operations we have are all pure we don't care about the state of the heap
+   but only when we sum values instead of expression *)
+Lemma wp_op op v1 v2 v P:
+  eval_bin_op op v1 v2 = Some v →
+  P ⊢ wp (EOp op (EVal v1) (EVal v2)) P v.
+Proof.
+  intros Hop m HP mf Hdisj.
+  exists m.
+  split; auto.
+  split; auto.
+  eauto using steps_single, head_step.
+Qed.
+
+Lemma wp_error v :
+  ⌜ true ⌝ ⊢ wp EError ⌜ true ⌝ v.
+Proof.
+  intros m H mf Hdisj.
+  exists m.
+  split; auto.
+  split; auto.
 (*
 
 Question: which of these do we want?
