@@ -1,5 +1,4 @@
 From stdpp Require Export gmap.
-From iris.bi Require Import bi.
 
 (* A little expression language with naturals, booleans and heap
    locations for primitive values along with a small step semantic

@@ -1,4 +1,5 @@
-Require lang.
+From iris.bi Require Import bi.
+Require Export lang.
 
 (* now that we have the starting point of our operational semantic
    I can focus on what it means for an expression to be an error.
