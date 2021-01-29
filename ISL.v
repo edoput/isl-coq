@@ -540,25 +540,100 @@ Proof.
 Qed.
 
 Lemma wp_alloc e P l v:
-  (P ⊢ λ m, m !! l = None) →
-  (wp (EAlloc (EVal v)) (wp e P v) (VLoc l) ⊢ wp (EAlloc e) P (VLoc l)).
+  wp (EAlloc (EVal v)) (wp e P v) (VLoc l) ⊢ wp (EAlloc e) P (VLoc l).
 Proof.
-  intros U m H mf Hdisj.
+  intros m H mf Hdisj.
+  specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps').
+  (* now it is implicit that m = <[l:v]> m' and the frame does not change
+     as we are inserting in m ∪ mf but we only do it on the left
+     thanks to insert_union_l *)
+  specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps'').
+  exists m''.
+  split; auto.
+  split; auto.
+  (* now to finally use the steps_alloc_val we have to prove
+     m ∪ mf = <[l:=v]> (m' ∪ mf) = (<[l:=v]> m) ∪ mf which lies
+     somewhere in the Hsteps' but for that we can make a lemma.
+  *)
+  eapply steps_mono.
+  rewrite <- fill_alloc.
+  eapply steps_context. eassumption.
+  rewrite fill_alloc.
+  assumption.
+Qed.
+
+Lemma wp_free e P l:
+  wp (EFree (EVal l)) (wp e P l) VUnit ⊢ wp (EFree e) P VUnit.
+Proof.
+  intros m H mf Hdisj.
   specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps).
   specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps').
   exists m''.
   split; auto.
   split; auto.
-  (* our main issue now is that EAlloc changes m' to m implicitly and
-     mf is also left the same implicitly so we have to come up with
-     a strategy to actually use this information *)
   eapply steps_mono.
-  specialize (U (m' ∪ mf) H) as U; simpl in U.
-  eapply steps_alloc_val.
-  - eassumption.
-  - admit. (* why is eassumption not working? *)
-  - (* now we have to show that m' ∪ mf with the new cell is m ∪ mf *) admit.
-Admitted.
+  rewrite <- fill_free.
+  eapply steps_context.
+  eassumption.
+  rewrite fill_free.
+  assumption.
+Qed.
+
+Lemma wp_store_val e P l v:
+  wp (EStore (EVal l) (EVal v)) (wp e P v) VUnit ⊢
+     wp (EStore (EVal l) e) P VUnit.
+Proof.
+  intros m H mf Hdisj.
+  specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps).
+  specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps').
+  exists m''.
+  split; auto.
+  split; auto.
+  eapply steps_mono.
+  rewrite <- fill_store_r.
+  eapply steps_context.
+  eassumption.
+  rewrite fill_store_r.
+  assumption.
+Qed.
+
+Lemma wp_store_loc e P l v:
+  wp (EStore (EVal l) (EVal v)) (wp e P l) VUnit ⊢
+     wp (EStore e (EVal v)) P VUnit.
+Proof.
+  intros m H mf Hdisj.
+  specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps).
+  specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps').
+  exists m''.
+  split; auto.
+  split; auto.
+  eapply steps_mono.
+  rewrite <- fill_store_l.
+  eapply steps_context.
+  eassumption.
+  rewrite fill_store_l.
+  assumption.
+Qed.
+
+
+Lemma wp_load e P l v:
+  wp (ELoad (EVal l)) (wp e P l) v ⊢
+     wp (ELoad e) P v.
+Proof.
+  intros m H mf Hdisj.
+  specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps).
+  specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps').
+  exists m''.
+  split; auto.
+  split; auto.
+  eapply steps_mono.
+  rewrite <- fill_load.
+  eapply steps_context.
+  eassumption.
+  rewrite fill_load.
+  assumption.
+Qed.
+
 (*
 
 Question: which of these do we want?
