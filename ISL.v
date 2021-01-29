@@ -499,7 +499,21 @@ Proof.
   eapply steps_mono; auto using steps_if_false.
 Qed.
 
-(* Lemma wp_while *)
+Lemma wp_while t e P v:
+  wp (EIf t (ESeq e (EWhile t e)) (EVal VUnit)) P v ⊢ wp (EWhile t e) P v.
+Proof.
+  iUnfold.
+  intros m H.
+  intros mf Hdisj.
+  specialize (H mf Hdisj) as (m' & Hdisj' & H' & Hsteps).
+  exists m'.
+  split; auto.
+  split; auto.
+  eapply steps_step.
+  - rewrite <- (fill_empty_context (EWhile t e)).
+    do 2 constructor.
+  - auto using fill_empty_context.
+Qed.
 
 (* as the binary operations we have are all pure we don't care about the state of the heap
    but only when we sum values instead of expression *)
