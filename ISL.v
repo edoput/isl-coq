@@ -539,6 +539,26 @@ Proof.
   intros ???H. inversion H.
 Qed.
 
+Lemma wp_alloc e P l v:
+  (P ⊢ λ m, m !! l = None) →
+  (wp (EAlloc (EVal v)) (wp e P v) (VLoc l) ⊢ wp (EAlloc e) P (VLoc l)).
+Proof.
+  intros U m H mf Hdisj.
+  specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps).
+  specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps').
+  exists m''.
+  split; auto.
+  split; auto.
+  (* our main issue now is that EAlloc changes m' to m implicitly and
+     mf is also left the same implicitly so we have to come up with
+     a strategy to actually use this information *)
+  eapply steps_mono.
+  specialize (U (m' ∪ mf) H) as U; simpl in U.
+  eapply steps_alloc_val.
+  - eassumption.
+  - admit. (* why is eassumption not working? *)
+  - (* now we have to show that m' ∪ mf with the new cell is m ∪ mf *) admit.
+Admitted.
 (*
 
 Question: which of these do we want?
