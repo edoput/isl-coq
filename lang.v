@@ -258,6 +258,18 @@ Proof. auto. Qed.
 Lemma fill_alloc e : (fill [AllocCtx] e) = (EAlloc e).
 Proof. auto. Qed.
 
+Lemma fill_free e : (fill [FreeCtx] e) = (EFree e).
+Proof. auto. Qed.
+
+Lemma fill_load e : (fill [LoadCtx] e) = (ELoad e).
+Proof. auto. Qed.
+
+Lemma fill_store_l e1 e2 : (fill [StoreCtxL e2] e1) = (EStore e1 e2).
+Proof. auto. Qed.
+
+Lemma fill_store_r l e : (fill [StoreCtxR l] e) = (EStore (EVal l) e).
+Proof. auto. Qed.
+
 (* Now for the last part of our reductions we lift the _(one) step_
    relation between expressions to a zero or more _steps_ relation. *)
 
@@ -406,4 +418,63 @@ Proof.
   apply (steps_mono (ESeq e e') (ESeq (EVal v) e') e'' m m' m'').
   - rewrite <- 2 fill_seq; apply steps_context; assumption.
   - auto using steps_seq_val.
+Qed.
+
+Lemma steps_alloc_val e m m' v l:
+  m' !! l = None →
+  steps e m (EVal v) m' → steps (EAlloc e) m (EVal (VLoc l)) (<[l:=v]> m').
+Proof.
+  intros U H.
+  eapply steps_mono.
+  rewrite <- fill_alloc.
+  eapply steps_context.
+  eassumption.
+  rewrite fill_alloc.
+  auto using steps_single with head_step.
+Qed.
+
+Lemma steps_free_val e m m' l:
+  m' !! l ≠ None →
+  steps e m (EVal (VLoc l)) m' → steps (EFree e) m (EVal VUnit) (delete l m').
+Proof.
+  intros U H.
+  eapply steps_mono.
+  rewrite <- fill_free.
+  eapply steps_context.
+  eassumption.
+  rewrite fill_free.
+  auto using steps_single with head_step.
+Qed.
+
+Lemma steps_load_val e m m' l v:
+  m' !! l = Some(v) →
+  steps e m (EVal (VLoc l)) m' → steps (ELoad e) m (EVal v) m'.
+Proof.
+  intros U H.
+  eapply steps_mono.
+  rewrite <- fill_load.
+  eapply steps_context.
+  eassumption.
+  rewrite fill_load.
+  auto using steps_single with head_step.
+Qed.
+
+Lemma steps_store_val e e' m m' m'' l v:
+  m'' !! l ≠ None →
+  steps e m (EVal (VLoc l)) m' →
+  steps e' m' (EVal v) m'' →
+  steps (EStore e e') m (EVal VUnit) (<[l:=v]> m'').
+Proof.
+  intros U Hl Hr.
+  eapply steps_mono.
+  rewrite <- fill_store_l.
+  eapply steps_context.
+  eassumption.
+  rewrite fill_store_l.
+  eapply steps_mono.
+  rewrite <- fill_store_r.
+  eapply steps_context.
+  eassumption.
+  rewrite fill_store_r.
+  auto using steps_single with head_step.
 Qed.
