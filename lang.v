@@ -230,6 +230,15 @@ Inductive step : expr → mem → expr → mem → Prop :=
 Lemma fill_empty_context e : (fill [] e) = e.
 Proof. auto. Qed.
 
+Lemma step_single e e' m m':
+  head_step e m e' m' → step e m e' m'.
+Proof.
+  intro.
+  rewrite <- (fill_empty_context e).
+  rewrite <- (fill_empty_context e').
+  auto using step.
+Qed.
+
 Create HintDb step.
 (* but for more specialized forms we can keep going *)
 
