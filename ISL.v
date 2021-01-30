@@ -368,8 +368,10 @@ Definition wp (e : expr) (P : iProp) (v : val) : iProp :=
 (*
    The important part of this is the m ##ₘ mf as it says there exists
    an anti-frame from which to start
-*)
+ *)
 
+Definition ewp (e : expr) (P : iProp) : iProp :=
+  λ m', ∀ mf, m' ##ₘ mf → (∃ m e', m ##ₘ mf ∧ P m ∧ steps e (m ∪ mf) e' (m' ∪ mf) ∧ is_error e' m').
 
 Lemma wp_frame P Q e v :
   Q ∗ wp e P v ⊢ wp e (Q ∗ P) v.
@@ -393,6 +395,70 @@ Proof.
   rewrite map_union_comm; solve_map_disjoint.
 Qed.
 
+(* Proving the frame rule for the _error_ result is not possible right now.
+   In the ISL paper they actually have an ace up their sleeve because their heap
+   _only grows_ (?).
+
+   The hard part here is to differentiate between the heaps described by
+   an iProp Q and the actual heap.
+
+   If we shrink the heap _resource errors_ might still appear and the same is
+   valid for growing a heap, eg. (lookup amb), but the rule for _under approximation_
+   logic actually gives us that _shrinking a post_ is always valid and _growing a post_
+   is not sound.
+ *)
+
+(* right now is_error feels strange because we might have a _condition_ error
+   where the programmer put an error form or a _resource_ error. The former
+   has no hope of going away by growing or shrinking the heap and might
+   transform in a resource error when this happens but the latter might
+   go away by growing the heap, e.g. (lookup 1) {[ 0 := 0]} ∪ {[ 1 := 0 ]}
+   is a valid program but with only the first location is an error.
+ *)
+
+(* Splitting is_error into two parts feels like the correct move but we are still
+   not addressing the _footprint_ issue. Any program we write has a footprint of
+   resources we use and must be present for the correct execution, when the resource
+   at our disposal is less than the footprint then we will (might?) encounter
+   a resource error.
+
+   Then we could express the is_error_mono by talking about the footprints
+   m ⊂ footprint(e) → is_error e m; this would solve the idea of memories that
+   grow/shrink/change but computing the footprint is problematic because of
+   non determinism
+*)
+
+
+Lemma ewp_frame P Q e:
+  Q ∗ ewp e P ⊢ ewp e (Q ∗ P).
+Proof.
+  iUnfold.
+  intros mT (m & m' & Hq & Hewp & -> & Hdisj) mf Hdisj'.
+  unfold ewp in *.
+  assert (m' ##ₘ (m ∪ mf)).
+  { solve_map_disjoint. }
+  specialize (Hewp (m ∪ mf) H) as (m'' & e' & Hdisj'' & Hp & Hsteps & Herror).
+  (* now in Hsteps we see that the frame contains the heap m satisfying Q
+     but because of being disjoing we are gonna rewrite things to make Hsteps
+     satisfy our goal *)
+  exists (m ∪ m''), e.
+  split. solve_map_disjoint.
+  split.
+  exists m, m''; split; auto.
+  split; auto.
+  split; auto.
+  solve_map_disjoint.
+  split.
+  - rewrite ! map_union_assoc in Hsteps.
+    admit.
+  - (* this is the real hard problem, we have to show that
+       by growing the heap there is still an error; this calls for
+       a footprint requirement such as foot(e) ##ₘ m' so that we
+       can still have this.
+     *)
+    admit.
+Admitted.
+  
 (* the incorrectness triple is valid if for any state describe by (Q v)
    we can reach it from a state in P after executing P under final value v.
 
