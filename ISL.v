@@ -470,6 +470,25 @@ Proof.
   - assumption.
 Qed.
 
+
+Lemma ewp_ctx E e P w:
+  ewp (fill E (EVal w)) (wp e P w) ⊢ ewp (fill E e) P.
+Proof.
+  unfold iEntails.
+  intros.
+  intros mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps' & Herror).
+  specialize (H' mf Hdisj') as (m'' & Hdisj'' & H'' & Hsteps'').
+  exists m'', e'.
+  split; auto.
+  split; auto.
+  split; auto.
+  eapply steps_mono.
+  - apply steps_context.
+    eassumption.
+  - assumption.
+Qed.
+
 Lemma wp_let x v w e1 e2 P :
   wp (subst x w e2) (wp e1 P w) v ⊢ wp (ELet x e1 e2) P v.
 Proof.
@@ -486,6 +505,26 @@ Proof.
   - apply steps_let_val'.
     apply steps_refl.
   - auto.
+Qed.
+
+Lemma ewp_let x w e1 e2 P :
+  ewp (subst x w e2) (wp e1 P w) ⊢ ewp (ELet x e1 e2) P.
+Proof.
+  intros m H.
+  rewrite <- fill_let.
+  eapply ewp_ctx.
+  simpl fill.
+  intros mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H & Hsteps & Herror).
+  exists m', e'.
+  split; auto.
+  split; eauto.
+  split.
+  - eapply steps_mono.
+    apply steps_let_val'.
+    apply steps_refl.
+    assumption.
+  - assumption.
 Qed.
 
 Lemma wp_seq e1 e2 P w v:
@@ -506,6 +545,36 @@ Proof.
   - assumption.
 Qed.
 
+Lemma ewp_seq e1 e2 P:
+  ewp e1 P ⊢ ewp (ESeq e1 e2) P.
+Proof.
+  intros m H.
+  rewrite <- fill_seq.
+  eapply ewp_ctx.
+  simpl fill.
+  intros mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H & Hsteps & Herror).
+  exists m', e'.
+  split; auto.
+  split; eauto.
+  admit.
+Admitted.
+
+Lemma ewp_seq' e1 e2 P w:
+  ewp e2 (wp e1 P w) ⊢ ewp (ESeq e1 e2) P.
+Proof.
+  intros m H.
+  rewrite <- fill_seq.
+  eapply ewp_ctx.
+  simpl fill.
+  intros mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H & Hsteps & Herror).
+  exists m', e'.
+  split; auto.
+  split; eauto.
+  split; eauto using steps_seq_val.
+Qed.
+
 Lemma wp_if_true t e1 e2 P v:
   wp e1 (wp t P (VBool true)) v ⊢ wp (EIf t e1 e2) P v.
 Proof.
@@ -519,6 +588,22 @@ Proof.
   split; eauto.
   split; eauto.
   eapply steps_mono; auto using steps_if_true.
+Qed.
+
+Lemma ewp_if_true t e1 e2 P:
+  ewp e1 (wp t P (VBool true)) ⊢ ewp (EIf t e1 e2) P.
+Proof.
+  intros m H.
+  rewrite <- fill_if.
+  eapply ewp_ctx.
+  simpl fill.
+  intros mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H & Hsteps & Herror).
+  exists m', e'.
+  split; eauto.
+  split; eauto.
+  split; auto.
+  eauto using steps_mono, steps_if_true.
 Qed.
 
 Lemma wp_if_false t e1 e2 P v:
@@ -536,6 +621,22 @@ Proof.
   eapply steps_mono; auto using steps_if_false.
 Qed.
 
+Lemma ewp_if_false t e1 e2 P:
+  ewp e2 (wp t P (VBool false)) ⊢ ewp (EIf t e1 e2) P.
+Proof.
+  intros m H.
+  rewrite <- fill_if.
+  eapply ewp_ctx.
+  simpl fill.
+  intros mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H & Hsteps & Herror).
+  exists m', e'.
+  split; eauto.
+  split; eauto.
+  split; auto.
+  eauto using steps_mono, steps_if_false.
+Qed.
+
 Lemma wp_while t e P v:
   wp (EIf t (ESeq e (EWhile t e)) (EVal VUnit)) P v ⊢ wp (EWhile t e) P v.
 Proof.
@@ -544,6 +645,22 @@ Proof.
   intros mf Hdisj.
   specialize (H mf Hdisj) as (m' & Hdisj' & H' & Hsteps).
   exists m'.
+  split; auto.
+  split; auto.
+  eapply steps_step.
+  - rewrite <- (fill_empty_context (EWhile t e)).
+    do 2 constructor.
+  - auto using fill_empty_context.
+Qed.
+
+Lemma ewp_while t e P:
+  ewp (EIf t (ESeq e (EWhile t e)) (EVal VUnit)) P ⊢ ewp (EWhile t e) P.
+Proof.
+  intros m H.
+  intros mf Hdisj.
+  specialize (H mf Hdisj) as (m' & t' & Hdisj' & H' & Hsteps & Herror).
+  exists m', t'.
+  split; auto.
   split; auto.
   split; auto.
   eapply steps_step.
@@ -566,14 +683,17 @@ Proof.
 Qed.
 
 Lemma wp_error P :
-  P ⊢ iError P EError.
+  P ⊢ ewp EError P.
 Proof.
   iUnfold.
-  intros m Hp.
-  do 2 eexists. split; eauto.
-  split. { apply steps_refl. }
+  intros m Hp mf Hdisj.
+  exists m, EError.
   split; auto.
-  intros ???H. inversion H.
+  split; auto.
+  split; auto using steps_refl.
+  split; auto.
+  intros e' m' H.
+  inversion H.
 Qed.
 
 Lemma wp_alloc e P l v:
