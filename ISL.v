@@ -719,6 +719,20 @@ Proof.
   assumption.
 Qed.
 
+(* this should be doable with contains_error *)
+Lemma ewp_alloc e P:
+  ewp (EAlloc e) (ewp e P) ⊢ ewp (EAlloc e) P.
+Proof.
+Admitted.
+
+(* this does not make much sense now as it describes resource exhaustion, in our
+   assumptions there is no way to run out of cells to allocate.
+*)
+Lemma ewp_alloc' e P v:
+  ewp (EAlloc (EVal v)) (wp e P v) ⊢ ewp (EAlloc e) P.
+Proof.
+Admitted.
+
 Lemma wp_free e P l:
   wp (EFree (EVal l)) (wp e P l) VUnit ⊢ wp (EFree e) P VUnit.
 Proof.
@@ -735,6 +749,11 @@ Proof.
   rewrite fill_free.
   assumption.
 Qed.
+
+Lemma ewp_free e P l:
+  ewp (EFree (EVal l)) (wp e P l) ⊢ ewp (EFree e) P.
+Proof.
+Admitted.
 
 Lemma wp_store_val e P l v:
   wp (EStore (EVal l) (EVal v)) (wp e P v) VUnit ⊢
@@ -754,6 +773,12 @@ Proof.
   assumption.
 Qed.
 
+Lemma ewp_store_val e P l v:
+  ewp (EStore (EVal l) (EVal v)) (wp e P v) ⊢
+     ewp (EStore (EVal l) e) P.
+Proof.
+Admitted.
+
 Lemma wp_store_loc e P l v:
   wp (EStore (EVal l) (EVal v)) (wp e P l) VUnit ⊢
      wp (EStore e (EVal v)) P VUnit.
@@ -772,6 +797,11 @@ Proof.
   assumption.
 Qed.
 
+Lemma ewp_store_loc e P l v:
+  ewp (EStore (EVal l) (EVal v)) (wp e P l) ⊢
+     ewp (EStore e (EVal v)) P.
+Proof.
+Admitted.
 
 Lemma wp_load e P l v:
   wp (ELoad (EVal l)) (wp e P l) v ⊢
@@ -790,6 +820,12 @@ Proof.
   rewrite fill_load.
   assumption.
 Qed.
+
+Lemma ewp_load e P l:
+  ewp (ELoad (EVal l)) (wp e P l) ⊢
+     ewp (ELoad e) P.
+Proof.
+Admitted.
 
 (*
 
