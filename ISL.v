@@ -690,13 +690,13 @@ Proof.
   inversion H.
 Qed.
 
-Lemma wp_alloc :
+Lemma wp_alloc v P :
   True ⊢ ∃ l, wp (EAlloc (EVal v)) P (VLoc l)
 Proof.
 Admitted.
 
-Lemma wp_alloc_neg :
-  neg_points_to l ⊢ wp (EAlloc (EVal v)) P (VLoc l).
+Lemma wp_alloc_neg l v P :
+  iNegPoints l ⊢ wp (EAlloc (EVal v)) P (VLoc l).
 Proof.
 Admitted.
 
