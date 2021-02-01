@@ -689,6 +689,18 @@ Proof.
   inversion H.
 Qed.
 
+Lemma wp_alloc :
+  True ⊢ ∃ l, wp (EAlloc (EVal v)) P (VLoc l)
+Proof.
+Admitted.
+
+Lemma wp_alloc_neg :
+  neg_points_to l ⊢ wp (EAlloc (EVal v)) P (VLoc l).
+Proof.
+Admitted.
+
+
+(* Maybe this is not necessary, subsumed by wp_ctx *)
 Lemma wp_alloc e P l v:
   wp (EAlloc (EVal v)) (wp e P v) (VLoc l) ⊢ wp (EAlloc e) P (VLoc l).
 Proof.
@@ -711,6 +723,11 @@ Proof.
   rewrite fill_alloc.
   assumption.
 Qed.
+
+
+Definition e := EAlloc (EVal (VNat 5)).
+Lemma bar : wp e emp (VLoc 0).
+
 
 (* this should be doable with contains_error *)
 Lemma ewp_alloc e P:
@@ -869,5 +886,6 @@ Plan:
 - [ ] Think about which additional rules for wp/ewp we need to prove all the rules in the paper using those lemmas
 - [ ] Prove all the rules in the paper using the rules for wp/ewp
 - [ ] Think about negative points to / the two alloc rules
+- [ ] Clean up the rules, delete any rules that are subsumed by the ctx rules
 
 *)
