@@ -216,6 +216,7 @@ Qed.
 Definition iProp := mem → Prop.
 Definition iEmp : iProp := λ m, m = ∅.
 Definition iPoints (l : nat) (v : val) : iProp := λ m, m = {[ l := v ]}.
+Definition iNegPoints (l : nat) : iProp := λ m, m !! l = None.
 Definition iSep (P Q : iProp) : iProp := λ m, ∃ m1 m2, P m1 ∧ Q m2 ∧ m = m1 ∪ m2 ∧ m1 ##ₘ m2 .
 Definition iWand (P Q : iProp) : iProp := λ m, ∀ m', m ##ₘ m' → P m' → Q (m' ∪ m).
 Definition iForall {A} (P : A → iProp) : iProp := λ m, ∀ x, P x m.
