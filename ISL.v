@@ -314,33 +314,6 @@ Proof. duh. Qed.
 Lemma iPure_elim (φ : Prop) P Q : (φ → P ⊢ Q) → ⌜ φ ⌝ ∗ P ⊢ Q.
 Proof. duh. Qed.
 
-
-(*
-  Intuitively, (iReaches P e v) means that:
-    "There is a heap in P that makes e evaluate to v and the current heap."
-*)
-Definition iReaches (P : iProp) (e : expr) (v : val) : iProp :=
-  λ m', ∃ m, P m ∧ steps e m (EVal v) m'.
-
-Definition reaches' (P : iProp) (e : expr) (Q : val → iProp) :=
-    ∀ v, iEntails (Q v) (iReaches P e v).
-
-Lemma reaches_reaches' P e Q :
-  reaches P e Q ↔ reaches' P e Q.
-Proof. reflexivity. Qed.
-
-Definition iError (P : iProp) (e : expr) : iProp :=
-  λ m', ∃ m e', P m ∧ steps e m e' m' ∧ is_error e' m'.
-
-Definition has_error e := ∃ m, iOwn m ⊢ iError emp e.
-
-Definition will_error' (P : iProp) (e : expr) :=
-  ∃ m', iError P e m'.
-
-Lemma will_error_will_error' P e :
-  will_error P e ↔ will_error' P e.
-Proof. split; intros (m1 & m2 & ?); by exists m2,m1. Qed.
-
 (*
   It's not very clear to me how to write those as iProps.
   The iReaches seems plausible to me, but iError IDK.
@@ -429,7 +402,7 @@ Proof.
     apply map_union_subseteq_l.
   - rewrite (map_union_comm m m'); auto.
 Qed.
-  
+
 (* the incorrectness triple is valid if for any state describe by (Q v)
    we can reach it from a state in P after executing P under final value v.
 
@@ -882,18 +855,19 @@ Plan:
 - [x] Make iError also have a frame
 - [x] State the rule for wp while
 - [x] Prove the rule for wp while
-- [ ] State the entailments for iError
-- [ ] Try to prove some of those entailments for iError
-- [ ] Clean up this file
-   - [ ] Put some stuff in separate files
-   - [ ] Make naming consistent (wp/iReaches/iError)
-- [ ] Think about combining iReaches/iError
-- try to define the proof rules for ISL using the assertion language we have
-  + CONS
-  + SEQ
-  + DISJ
-  + more to come
-- prove the proof rules sound
-- figure out how to write the ISL Hoare triples in WP-style
+- [x] Think about combining iReaches/iError
+- [x] Delete the iReaches stuff
+- [ ] Change definition of is_error to use step instead of head_step
+- [ ] Create a new file in which we define Hoare triples in terms of wp/ewp
+  ```
+  Definition reaches (P : iProp) (e : expr) (Q : val → iProp) :=
+    ∀ v, iEntails (Q v) (wp P e v).
+
+  Definition has_error e := ∃ m, iOwn m ⊢ ewp emp e.
+  ```
+- [ ] Put all the rules for the Hoare triples from the paper as lemmas in that file (Admitted)
+- [ ] Think about which additional rules for wp/ewp we need to prove all the rules in the paper using those lemmas
+- [ ] Prove all the rules in the paper using the rules for wp/ewp
+- [ ] Think about negative points to / the two alloc rules
 
 *)
