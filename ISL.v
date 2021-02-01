@@ -489,6 +489,26 @@ Proof.
   - assumption.
 Qed.
 
+Lemma ewp_ctx' E e P:
+  ewp e P ⊢ ewp (fill E e) P.
+Proof.
+  intros m H.
+  intros mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps' & Herror).
+  exists m', (fill E e').
+  split; auto.
+  split; auto.
+  split.
+  - eapply steps_context; auto.
+  - unfold is_error in *.
+    destruct Herror as (not_a_value & cant_step).
+    split.
+    + induction E.
+      * simpl; auto.
+      * admit.
+    + admit.
+Admitted.
+
 Lemma wp_let x v w e1 e2 P :
   wp (subst x w e2) (wp e1 P w) v ⊢ wp (ELet x e1 e2) P v.
 Proof.
