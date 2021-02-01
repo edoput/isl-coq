@@ -888,5 +888,12 @@ Plan:
 - [ ] Prove all the rules in the paper using the rules for wp/ewp
 - [ ] Think about negative points to / the two alloc rules
 - [ ] Clean up the rules, delete any rules that are subsumed by the ctx rules
+- [ ] In the ISL paper can they prove this program can error
+  ```
+  x = alloc(3)
+  y = alloc(3)
+  if(x != y) then foo: Error
+  ```
+  
 
 *)
