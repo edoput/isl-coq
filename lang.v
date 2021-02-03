@@ -239,6 +239,120 @@ Proof.
   auto using step.
 Qed.
 
+Lemma context_composition e E E': fill E (fill E' e) = fill (E ++ E') e.
+Proof.
+  induction E.
+  - auto using app_nil_l, fill_empty_context.
+  - simpl. apply f_equal. assumption.
+Qed.
+
+Lemma step_context e e' m m' E :
+  step e m e' m' → step (fill E e) m (fill E e') m'.
+Proof.
+  intro.
+  destruct H.
+  rewrite -> 2 context_composition.
+  constructor.
+  assumption.
+Qed.
+
+Lemma step_prefix e e' m m':
+  step e m e' m' ↔ ∃ E e1 e2, (fill E e1) = e ∧ (fill E e2) = e' ∧ step e1 m e2 m'.
+Proof.
+  split.
+  - intro.
+    inversion H.
+    exists E, e1, e2; do 2 split; auto.
+    auto using step_single.
+  - intro. (* as (E & e1 & e2 & H).*)
+    destruct H as (E & e1 & e2 & He1 & He2 & H).
+    subst.
+    auto using step_context.
+Qed.
+    
+(* later on we can define is_error as an expression that does not step anymore
+   and to actually get to prove errors about resources we need some lemmas
+   to discharge this to assumptions on the heaps *)
+Lemma step_alloc v l m:
+      m !! l = None ↔ step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[l:=v]> m).
+Proof.
+  split.
+  - intro.
+    change (EAlloc (EVal v)) with (fill []  (EAlloc (EVal v))).
+    change (EVal (VLoc l)) with (fill [] (EVal (VLoc l))).
+    econstructor.
+    constructor.
+    assumption.
+  - intro.
+    inversion H.
+    destruct E.
+    + rewrite fill_empty_context in *; subst.
+      inversion H3.
+      assumption.
+    + simpl in *.
+      destruct c; simpl in *; discriminate.
+Qed.
+
+Lemma step_free l m:
+  m !! l ≠ None ↔ step (EFree (EVal (VLoc l))) m (EVal VUnit) (delete l m).
+Proof.
+  split.
+  - intro.
+    change (EFree (EVal (VLoc l))) with (fill [] (EFree (EVal (VLoc l)))).
+    change (EVal VUnit) with (fill [] (EVal VUnit)).
+    econstructor.
+    constructor.
+    assumption.
+  - intro.
+    inversion H.
+    destruct E.
+    + rewrite fill_empty_context in *; subst.
+      inversion H3.
+      assumption.
+    + simpl in *.
+      destruct c; simpl in *; discriminate.
+Qed.
+
+Lemma step_load l v m:
+  m !! l = Some(v) ↔ step (ELoad (EVal (VLoc l))) m (EVal v) m.
+Proof.
+  split.
+  - intro.
+    change (ELoad (EVal (VLoc l))) with (fill [] (ELoad (EVal (VLoc l)))).
+    change (EVal v) with (fill [] (EVal v)).
+    econstructor.
+    constructor.
+    assumption.
+  - intro.
+    inversion H.
+    destruct E.
+    + rewrite fill_empty_context in *; subst.
+      inversion H3.
+      assumption.
+    + simpl in *.
+      destruct c; simpl in *; discriminate.
+Qed.
+
+Lemma step_store l v m:
+  m !! l ≠ None ↔ step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[l:=v]> m).
+Proof.
+  split.
+  - intro.
+    change (EStore (EVal (VLoc l)) (EVal v)) with (fill [] (EStore (EVal (VLoc l)) (EVal v))).
+    change (EVal VUnit) with (fill [] (EVal VUnit)).
+    econstructor.
+    econstructor.
+    assumption.
+  - intro.
+    inversion H.
+    destruct E.
+    + rewrite fill_empty_context in *; subst.
+      inversion H3.
+      assumption.
+    + simpl in *.
+      destruct c; simpl in *; discriminate.
+Qed.
+    
 Create HintDb step.
 (* but for more specialized forms we can keep going *)
 
@@ -320,22 +434,7 @@ Qed.
 
 (* But even with this _steps_mono_ lemma there are still some improvements we can have. steps mono cannot help us reducing an expression to a value in a let expression binding without applying it more than twice so here are some more lemmas about multiple steps reductions happening in your AST with a hole. *)
 
-Lemma context_composition e E E': fill E (fill E' e) = fill (E ++ E') e.
-Proof.
-  induction E.
-  - auto using app_nil_l, fill_empty_context.
-  - simpl. apply f_equal. assumption.
-Qed.
-
-Lemma step_context e e' m m' E :
-  step e m e' m' → step (fill E e) m (fill E e') m'.
-Proof.
-  intro.
-  destruct H.
-  rewrite -> 2 context_composition.
-  constructor.
-  assumption.
-Qed.
+(* steps *)
 
 Lemma steps_context e e' h h' E :
   steps e h e' h' → steps (fill E e) h (fill E e') h'.
