@@ -293,6 +293,28 @@ Proof.
       destruct c; simpl in *; discriminate.
 Qed.
 
+Lemma step_alloc_inv e v m m':
+  step (EAlloc (EVal v)) m e m' ↔ ∃ l, e = (EVal (VLoc l)) ∧ m !! l = None ∧ m' = <[l:=v]> m.
+Proof.
+  split; intro.
+  - inversion H.
+    destruct E.
+    + simpl in *; subst.
+      inversion H1.
+      exists l.
+      split; auto.
+    + destruct c; simpl in *; discriminate || auto.
+      * inversion H0.
+        destruct E; simpl in *.
+        subst e1.
+        inversion H1.
+        destruct c; simpl in *; discriminate.
+  - destruct H as (loc & value & precondition & final_heap).
+    subst.
+    apply step_single.
+    auto using head_step.
+Qed.
+
 Lemma step_free l m:
   m !! l ≠ None ↔ step (EFree (EVal (VLoc l))) m (EVal VUnit) (delete l m).
 Proof.
@@ -311,6 +333,30 @@ Proof.
       assumption.
     + simpl in *.
       destruct c; simpl in *; discriminate.
+Qed.
+
+Lemma step_free_inv e l m m':
+  step (EFree (EVal (VLoc l))) m e m' ↔ e = (EVal VUnit) ∧ m !! l ≠ None ∧ m' = delete l m.
+Proof.
+  split.
+  - intro.
+    inversion H.
+    destruct E; simpl in *.
+    + subst.
+      inversion H1.
+      split; auto.
+    + destruct c; simpl in *; discriminate || auto.
+      * inversion H0.
+        destruct E; simpl in *; discriminate || auto.
+        subst.
+        inversion H1.
+        destruct c; simpl in *; discriminate || auto.
+  - intro.
+    destruct H as (value & precondition & final).
+    subst.
+    apply step_single.
+    constructor.
+    assumption.
 Qed.
 
 Lemma step_load l v m:
@@ -333,6 +379,11 @@ Proof.
       destruct c; simpl in *; discriminate.
 Qed.
 
+Lemma step_load_inv e l m m':
+  step (ELoad (EVal (VLoc l))) m e m' ↔ ∃ v, e = (EVal v) ∧ m !! l = Some(v) ∧ m' = m.
+Proof.
+Admitted.
+
 Lemma step_store l v m:
   m !! l ≠ None ↔ step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[l:=v]> m).
 Proof.
@@ -350,9 +401,14 @@ Proof.
       inversion H3.
       assumption.
     + simpl in *.
-      destruct c; simpl in *; discriminate.
+      destruct c; simpl in *; discriminate || auto.
 Qed.
-    
+
+Lemma step_store_inv l v e m m':
+  step (EStore (EVal (VLoc l)) (EVal v)) m e m' ↔ m !! l ≠ None ∧ e = (EVal VUnit) ∧ m' = (<[l:=v]> m).
+Proof.
+Admitted.
+
 Create HintDb step.
 (* but for more specialized forms we can keep going *)
 
