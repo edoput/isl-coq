@@ -50,8 +50,10 @@ Lemma resource_error l: is_error (EFree (EVal (VLoc l))) ∅.
 Proof.
   split; [auto|].
   intros ???H.
-  inversion H.
-  by rewrite lookup_empty in H1.
+  erewrite step_free_inv in H.
+  destruct H as (_ & lookup & _).
+  rewrite lookup_empty in lookup.
+  auto.
 Qed.
 
 (* Now that we have found what it means for an expression to be an error
@@ -118,6 +120,10 @@ Proof.
     intros.
     intro.
     inversion H.
+    destruct E; simpl in *.
+    + subst.
+      inversion H1.
+    + destruct c; simpl in *; discriminate || auto.
 Qed.
 
 (* if an error state is reachable in a sub-expression then we might get lucky *)
@@ -213,10 +219,12 @@ Proof.
     + auto.
     + intros.
       intro.
-      inversion H.
-      apply H5.
-      apply lookup_union_None.
-      split; apply lookup_singleton_ne; auto.
+      erewrite step_store_inv in H. destruct H as (lookup_h & _ & _).
+      assert ((({[1 := VLoc 2]} : mem) ∪ ({[2 := VNat 42]} : mem) ) !! 0 = None).
+      { rewrite lookup_union_None.
+        split; rewrite lookup_singleton_ne; auto.
+      }.
+      auto.
 Qed.
 
 Definition iProp := mem → Prop.
@@ -694,12 +702,14 @@ Proof.
   split; auto.
   intros e' m' H.
   inversion H.
+  destruct E; simpl in *; discriminate || auto.
+  - subst. inversion H1.
+  - destruct c; simpl in *; discriminate || auto.
 Qed.
 
-Lemma wp_alloc v P :
-  True ⊢ ∃ l, wp (EAlloc (EVal v)) P (VLoc l)
-Proof.
-Admitted.
+
+Fail Lemma wp_alloc v P :
+  iPure True ⊢ Ex l, P ∧ (fun m => m !! l = None) ∧ wp (EAlloc (EVal v)) P (VLoc l).
 
 Lemma wp_alloc_neg l v P :
   iNegPoints l ⊢ wp (EAlloc (EVal v)) P (VLoc l).
@@ -731,10 +741,11 @@ Proof.
   assumption.
 Qed.
 
-
 Definition e := EAlloc (EVal (VNat 5)).
-Lemma bar : wp e emp (VLoc 0).
-
+Lemma bar : iPure True ⊢ wp e emp (VLoc 0).
+Proof.
+  eapply iEntails_trans.
+Admitted.
 
 (* this should be doable with contains_error *)
 Lemma ewp_alloc e P:
