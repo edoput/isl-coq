@@ -17,17 +17,17 @@ Definition is_val e :=
   | _ => false
   end.
 
+(* our expression is an error when we cannot step anymore in the reduction *)
+Definition is_error e h := not (is_val e) ∧ ∀ e' h', not (step e h e' h').
 
-(* This is our first attempt. an expression is an error when it's not
-   a value and cannot be reduced anymore *)
-Definition is_error e h := not (is_val e) ∧ ∀ e' h', not (head_step e h e' h').
+
 
 
 Example simple_error := is_error EError ∅.
 
 Lemma our_first_error : simple_error.
 Proof.
-  unfold simple_error, is_error.
+  unfold simple_error.
   split.
   - auto.
   - intros.
@@ -38,6 +38,12 @@ Proof.
        must come from there.
      *)
     inversion H.
+    (* the inversion left us with an _unknown_ context E to work with
+       but we still have the restriction that fill E e1 = EError; this
+       only makes sense when E = [] and e1 = EError *)
+    destruct E.
+    * simpl in *; subst; inversion H1.
+    * destruct c; simpl in *; discriminate.
 Qed.
 
 Lemma resource_error l: is_error (EFree (EVal (VLoc l))) ∅.
