@@ -45,31 +45,30 @@ Proof.
   destruct E; eauto. by destruct c.
 Qed.
 
-Lemma fill_reducible e e' h E E' Q1 Q2 :
-  is_error e h →
-  fill E' e' = fill E e →
-  head_step e' h Q1 Q2 →
-  False.
+Lemma fill_item_not_val e a :
+  ¬ is_val (fill_item a e).
+Proof.
+  destruct a; eauto.
+Qed.
+
+Lemma is_error_fill_item e h a :
+  is_error e h → is_error (fill_item a e) h.
 Proof.
   intros [Hv Hs].
-  revert E'.
-  induction E; simpl; intros E' Hfill Hh.
-  - subst. eapply Hs. econstructor. done.
-  - destruct E'; simpl in *.
-    + subst. eauto using head_step_fill_item_val, is_val_fill.
-    + apply fill_item_eq_val in Hfill as [|[]];
-      eauto using is_val_fill, head_step_not_val.
+  split; eauto using fill_item_not_val.
+  intros e' h' H. inversion H. clear H. subst.
+  induction E; simpl in *. subst.
+  - eauto using head_step_fill_item_val.
+  - apply fill_item_eq_val in H0 as [|[]];
+    eauto using is_val_fill, head_step_not_val.
+    subst. eapply Hs. constructor. done.
 Qed.
 
 Lemma is_error_fill e h E :
   is_error e h → is_error (fill E e) h.
 Proof.
-  split; first (destruct H; eauto using is_val_fill).
-  intros e' h' Hs.
-  inversion Hs. subst.
-  eauto using fill_reducible.
+  induction E; simpl; eauto using is_error_fill_item.
 Qed.
-
 
 Example simple_error := is_error EError ∅.
 
