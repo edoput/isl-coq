@@ -220,11 +220,8 @@ Proof.
     + intros.
       intro.
       erewrite step_store_inv in H. destruct H as (lookup_h & _ & _).
-      assert ((({[1 := VLoc 2]} : mem) ∪ ({[2 := VNat 42]} : mem) ) !! 0 = None).
-      { rewrite lookup_union_None.
-        split; rewrite lookup_singleton_ne; auto.
-      }.
-      auto.
+      apply lookup_h.
+      apply lookup_union_None; auto using lookup_singleton_ne.
 Qed.
 
 Definition iProp := mem → Prop.
@@ -716,9 +713,8 @@ Lemma wp_alloc_neg l v P :
 Proof.
 Admitted.
 
-
 (* Maybe this is not necessary, subsumed by wp_ctx *)
-Lemma wp_alloc e P l v:
+Lemma wp_alloc_ctx e P l v:
   wp (EAlloc (EVal v)) (wp e P v) (VLoc l) ⊢ wp (EAlloc e) P (VLoc l).
 Proof.
   intros m H mf Hdisj.
