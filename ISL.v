@@ -20,7 +20,58 @@ Definition is_val e :=
 (* our expression is an error when we cannot step anymore in the reduction *)
 Definition is_error e h := not (is_val e) ∧ ∀ e' h', not (step e h e' h').
 
+Lemma head_step_fill_item_val a e e' h h' :
+  head_step (fill_item a e) h e' h' → is_val e.
+Proof.
+  destruct a; simpl; intros H; inversion H; done.
+Qed.
 
+Lemma fill_item_eq_val a1 a2 e1 e2 :
+  fill_item a1 e1 = fill_item a2 e2 →
+  e1 = e2 ∨ is_val e1 ∨ is_val e2.
+Proof.
+  destruct a1,a2; simpl; intro; simplify_eq; eauto.
+Qed.
+
+Lemma head_step_not_val e1 e2 h1 h2 :
+  head_step e1 e2 h1 h2 → is_val e1 → False.
+Proof.
+  intros Hs?. by inversion Hs; subst.
+Qed.
+
+Lemma is_val_fill e E :
+  is_val (fill E e) → is_val e.
+Proof.
+  destruct E; eauto. by destruct c.
+Qed.
+
+Definition reducible e h := ∃ e' h', step e h e' h'.
+Definition head_reducible e h := ∃ e' h', head_step e h e' h'.
+
+Lemma fill_reducible e e' h E E' Q1 Q2 :
+  is_error e h →
+  fill E' e' = fill E e →
+  head_step e' h Q1 Q2 →
+  False.
+Proof.
+  intros [Hv Hs].
+  revert E'.
+  induction E; simpl; intros E' Hfill Hh.
+  - subst. eapply Hs. econstructor. done.
+  - destruct E'; simpl in *.
+    + subst. eauto using head_step_fill_item_val, is_val_fill.
+    + apply fill_item_eq_val in Hfill as [|[]];
+      eauto using is_val_fill, head_step_not_val.
+Qed.
+
+Lemma is_error_fill e h E :
+  is_error e h → is_error (fill E e) h.
+Proof.
+  split; first (destruct H; eauto using is_val_fill).
+  intros e' h' Hs.
+  inversion Hs. subst.
+  eauto using fill_reducible.
+Qed.
 
 
 Example simple_error := is_error EError ∅.
@@ -907,6 +958,6 @@ Plan:
   y = alloc(3)
   if(x != y) then foo: Error
   ```
-  
+
 
 *)
