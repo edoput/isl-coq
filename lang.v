@@ -351,12 +351,8 @@ Proof.
         subst.
         inversion H1.
         destruct c; simpl in *; discriminate || auto.
-  - intro.
-    destruct H as (value & precondition & final).
-    subst.
-    apply step_single.
-    constructor.
-    assumption.
+  - intros [-> [Hlookup ->]].
+    apply step_free; auto.
 Qed.
 
 Lemma step_load l v m:
@@ -382,7 +378,20 @@ Qed.
 Lemma step_load_inv e l m m':
   step (ELoad (EVal (VLoc l))) m e m' ↔ ∃ v, e = (EVal v) ∧ m !! l = Some(v) ∧ m' = m.
 Proof.
-Admitted.
+  split.
+  - intro.
+    inversion H.
+    destruct E; simpl in *; discriminate || auto; subst.
+    + inversion H1; simpl in *; discriminate || auto; subst.
+      exists v; split; auto.
+    + destruct c; simpl in *; discriminate || auto; subst.
+      * inversion H0.
+        destruct E; simpl in *; discriminate || auto; subst.
+        inversion H1.
+        destruct c; simpl in *; discriminate || auto.
+  - intros [v [-> [Hlookup ->]]].
+    apply step_load; auto.
+Qed.
 
 Lemma step_store l v m:
   m !! l ≠ None ↔ step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[l:=v]> m).
@@ -407,7 +416,23 @@ Qed.
 Lemma step_store_inv l v e m m':
   step (EStore (EVal (VLoc l)) (EVal v)) m e m' ↔ m !! l ≠ None ∧ e = (EVal VUnit) ∧ m' = (<[l:=v]> m).
 Proof.
-Admitted.
+   split.
+  - intro.
+    inversion H.
+    destruct E; simpl in *; discriminate || auto; subst.
+    + inversion H1; simpl in *; discriminate || auto; subst.
+    + destruct c; simpl in *; discriminate || auto; subst.
+      * inversion H0.
+        destruct E; simpl in *; discriminate || auto; subst.
+        inversion H1.
+        destruct c; simpl in *; discriminate || auto.
+      * inversion H0.
+        destruct E; simpl in *; discriminate || auto; subst.
+        inversion H1.
+        destruct c; simpl in *; discriminate || auto.
+  - intros [Hlookup [->  ->]].
+    apply step_store; auto.
+Qed.
 
 Create HintDb step.
 (* but for more specialized forms we can keep going *)
