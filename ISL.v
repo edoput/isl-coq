@@ -45,9 +45,6 @@ Proof.
   destruct E; eauto. by destruct c.
 Qed.
 
-Definition reducible e h := ∃ e' h', step e h e' h'.
-Definition head_reducible e h := ∃ e' h', head_step e h e' h'.
-
 Lemma fill_reducible e e' h E E' Q1 Q2 :
   is_error e h →
   fill E' e' = fill E e →
