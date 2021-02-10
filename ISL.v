@@ -554,16 +554,8 @@ Proof.
   exists m', (fill E e').
   split; auto.
   split; auto.
-  split.
-  - eapply steps_context; auto.
-  - unfold is_error in *.
-    destruct Herror as (not_a_value & cant_step).
-    split.
-    + induction E.
-      * simpl; auto.
-      * admit.
-    + admit.
-Admitted.
+  eauto using steps_context, is_error_fill.
+Qed.
 
 Lemma wp_let x v w e1 e2 P :
   wp (subst x w e2) (wp e1 P w) v ⊢ wp (ELet x e1 e2) P v.
@@ -626,15 +618,9 @@ Lemma ewp_seq e1 e2 P:
 Proof.
   intros m H.
   rewrite <- fill_seq.
-  eapply ewp_ctx.
-  simpl fill.
-  intros mf Hdisj.
-  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H & Hsteps & Herror).
-  exists m', e'.
-  split; auto.
-  split; eauto.
-  admit.
-Admitted.
+  apply ewp_ctx'.
+  assumption.
+Qed.
 
 Lemma ewp_seq' e1 e2 P w:
   ewp e2 (wp e1 P w) ⊢ ewp (ESeq e1 e2) P.
@@ -788,24 +774,9 @@ Admitted.
 Lemma wp_alloc_ctx e P l v:
   wp (EAlloc (EVal v)) (wp e P v) (VLoc l) ⊢ wp (EAlloc e) P (VLoc l).
 Proof.
-  intros m H mf Hdisj.
-  specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps').
-  (* now it is implicit that m = <[l:v]> m' and the frame does not change
-     as we are inserting in m ∪ mf but we only do it on the left
-     thanks to insert_union_l *)
-  specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps'').
-  exists m''.
-  split; auto.
-  split; auto.
-  (* now to finally use the steps_alloc_val we have to prove
-     m ∪ mf = <[l:=v]> (m' ∪ mf) = (<[l:=v]> m) ∪ mf which lies
-     somewhere in the Hsteps' but for that we can make a lemma.
-  *)
-  eapply steps_mono.
   rewrite <- fill_alloc.
-  eapply steps_context. eassumption.
-  rewrite fill_alloc.
-  assumption.
+  rewrite <- fill_alloc at 1.
+  apply wp_ctx.
 Qed.
 
 Definition e := EAlloc (EVal (VNat 5)).
@@ -814,113 +785,96 @@ Proof.
   eapply iEntails_trans.
 Admitted.
 
-(* this should be doable with contains_error *)
-Lemma ewp_alloc e P:
-  ewp (EAlloc e) (ewp e P) ⊢ ewp (EAlloc e) P.
-Proof.
-Admitted.
-
 (* this does not make much sense now as it describes resource exhaustion, in our
    assumptions there is no way to run out of cells to allocate.
 *)
-Lemma ewp_alloc' e P v:
+Lemma ewp_alloc e P v:
   ewp (EAlloc (EVal v)) (wp e P v) ⊢ ewp (EAlloc e) P.
 Proof.
-Admitted.
+  rewrite <- fill_alloc.
+  rewrite <- fill_alloc at 1.
+  apply ewp_ctx.
+Qed.
+
+(* this should be doable with contains_error *)
+Lemma ewp_alloc' e P:
+  (ewp e P) ⊢ ewp (EAlloc e) P.
+Proof.
+  intros m H.
+  rewrite <- fill_alloc.
+  apply ewp_ctx'.
+  assumption.
+Qed.
 
 Lemma wp_free e P l:
   wp (EFree (EVal l)) (wp e P l) VUnit ⊢ wp (EFree e) P VUnit.
 Proof.
-  intros m H mf Hdisj.
-  specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps).
-  specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps').
-  exists m''.
-  split; auto.
-  split; auto.
-  eapply steps_mono.
   rewrite <- fill_free.
-  eapply steps_context.
-  eassumption.
-  rewrite fill_free.
-  assumption.
+  rewrite <- fill_free at 1.
+  apply wp_ctx.
 Qed.
 
 Lemma ewp_free e P l:
   ewp (EFree (EVal l)) (wp e P l) ⊢ ewp (EFree e) P.
 Proof.
-Admitted.
+  rewrite <- fill_free.
+  rewrite <- fill_free at 1.
+  apply ewp_ctx.
+Qed.
 
 Lemma wp_store_val e P l v:
   wp (EStore (EVal l) (EVal v)) (wp e P v) VUnit ⊢
      wp (EStore (EVal l) e) P VUnit.
 Proof.
-  intros m H mf Hdisj.
-  specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps).
-  specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps').
-  exists m''.
-  split; auto.
-  split; auto.
-  eapply steps_mono.
   rewrite <- fill_store_r.
-  eapply steps_context.
-  eassumption.
-  rewrite fill_store_r.
-  assumption.
+  rewrite <- fill_store_r at 1.
+  apply wp_ctx.
 Qed.
 
 Lemma ewp_store_val e P l v:
   ewp (EStore (EVal l) (EVal v)) (wp e P v) ⊢
      ewp (EStore (EVal l) e) P.
 Proof.
-Admitted.
+  rewrite <- fill_store_r.
+  rewrite <- fill_store_r at 1.
+  apply ewp_ctx.
+Qed.
 
 Lemma wp_store_loc e P l v:
   wp (EStore (EVal l) (EVal v)) (wp e P l) VUnit ⊢
      wp (EStore e (EVal v)) P VUnit.
 Proof.
-  intros m H mf Hdisj.
-  specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps).
-  specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps').
-  exists m''.
-  split; auto.
-  split; auto.
-  eapply steps_mono.
   rewrite <- fill_store_l.
-  eapply steps_context.
-  eassumption.
-  rewrite fill_store_l.
-  assumption.
+  rewrite <- fill_store_l at 1.
+  apply wp_ctx.
 Qed.
 
 Lemma ewp_store_loc e P l v:
   ewp (EStore (EVal l) (EVal v)) (wp e P l) ⊢
      ewp (EStore e (EVal v)) P.
 Proof.
-Admitted.
+  rewrite <- fill_store_l.
+  rewrite <- fill_store_l at 1.
+  apply ewp_ctx.
+Qed.
 
 Lemma wp_load e P l v:
   wp (ELoad (EVal l)) (wp e P l) v ⊢
      wp (ELoad e) P v.
 Proof.
-  intros m H mf Hdisj.
-  specialize (H mf Hdisj) as (m' & Hdisj' & H & Hsteps).
-  specialize (H mf Hdisj') as (m'' & Hdisj'' & H & Hsteps').
-  exists m''.
-  split; auto.
-  split; auto.
-  eapply steps_mono.
   rewrite <- fill_load.
-  eapply steps_context.
-  eassumption.
-  rewrite fill_load.
-  assumption.
+  rewrite <- fill_load at 1.
+  apply wp_ctx.
 Qed.
 
 Lemma ewp_load e P l:
   ewp (ELoad (EVal l)) (wp e P l) ⊢
      ewp (ELoad e) P.
 Proof.
-Admitted.
+  rewrite <- fill_load.
+  rewrite <- fill_load at 1.
+  apply ewp_ctx.
+Qed.
 
 (*
 
