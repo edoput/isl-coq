@@ -402,12 +402,36 @@ Definition wp (e : expr) (P : iProp) (v : val) : iProp :=
    an anti-frame from which to start
  *)
 
+(* if we increase the set of initial states then we still cover all the final states *)
+Lemma wp_mono_presume P R e v:
+  (P ⊢ R) → wp e P v ⊢ wp e R v.
+Proof.
+  intro.
+  intros m HP.
+  intros mf Hdisj.
+  specialize (HP mf Hdisj) as (m' & Hdisj' & HP & Hsteps).
+  exists m'.
+  eauto.
+Qed.
+
+
 (* fo there _error path_ we can mirror the definition but there are caveats
    that are implicit and I would like to point out.
    - asking m' ##ₘ mf → is_error e' (m' ∪ mf) is to have the _footprint_ of e be out of mf
 *)
 Definition ewp (e : expr) (P : iProp) : iProp :=
   λ m', ∀ mf, m' ##ₘ mf → (∃ m e', m ##ₘ mf ∧ P m ∧ steps e (m ∪ mf) e' (m' ∪ mf) ∧ is_error e' (m' ∪ mf)).
+
+Lemma ewp_mono_presume P R e:
+  (P ⊢ R) → ewp e P ⊢ ewp e R.
+Proof.
+  intro.
+  intros m HP.
+  intros mf Hdisj.
+  specialize (HP mf Hdisj) as (m' & e' & Hdisj' & HP & Hsteps & Herror).
+  exists m', e'.
+  eauto.
+Qed.
 
 Lemma wp_frame P Q e v :
   Q ∗ wp e P v ⊢ wp e (Q ∗ P) v.
