@@ -776,13 +776,7 @@ Qed.
 Fail Lemma wp_alloc v P :
   iPure True ⊢ Ex l, P ∧ (fun m => m !! l = None) ∧ wp (EAlloc (EVal v)) P (VLoc l).
 
-Lemma wp_alloc_neg l v P :
-  iNegPoints l ⊢ wp (EAlloc (EVal v)) P (VLoc l).
-Proof.
-Admitted.
-
-(* Maybe this is not necessary, subsumed by wp_ctx *)
-Lemma wp_alloc_ctx e P l v:
+Lemma wp_alloc e P l v:
   wp (EAlloc (EVal v)) (wp e P v) (VLoc l) ⊢ wp (EAlloc e) P (VLoc l).
 Proof.
   rewrite <- fill_alloc.
