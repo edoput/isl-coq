@@ -414,6 +414,11 @@ Proof.
   eauto.
 Qed.
 
+(* if we shrink the set of final heap states then we still cover them all *)
+Lemma wp_mono_result P Q R e v:
+  (R ⊢ Q) → (Q ⊢ wp e P v) → (R ⊢ wp e P v).
+Proof.
+Admitted.
 
 (* fo there _error path_ we can mirror the definition but there are caveats
    that are implicit and I would like to point out.
@@ -432,6 +437,12 @@ Proof.
   exists m', e'.
   eauto.
 Qed.
+
+(* if we shrink the set of final heap states then we still cover them all *)
+Lemma ewp_mono_result P Q R e:
+  (R ⊢ Q) → (Q ⊢ ewp e P) → (R ⊢ ewp e P).
+Proof.
+Admitted.
 
 Lemma wp_frame P Q e v :
   Q ∗ wp e P v ⊢ wp e (Q ∗ P) v.
