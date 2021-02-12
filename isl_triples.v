@@ -20,6 +20,13 @@ Require Export ISL.
 
   ASSIGN ∅ ⊢ [x=x']x:=e[ok:x=e[x'/x]]
 
+  is replaced by shadowing in a let-binding; x:=e assumes the name x exists already
+  and has value x', the new value will be the value of e which we compute as e[x'/x]
+
+  (let (EVar "x") e body) reduces as follows; given steps e m v m' then we have
+  steps (let (EVar "x") e body) m (subst (EVar "x") v body) m' replacing
+  each instance of (EVar "x") with v (up to another let binding).
+
   HAVOC ∅ ⊢ [x=x']x:=*[ok:x=v]
 
   ASSUME ∅ ⊢ [emp]assume(B)[ok:B]
