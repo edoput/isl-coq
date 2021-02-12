@@ -442,7 +442,10 @@ Qed.
 Lemma ewp_mono_result P Q R e:
   (R ⊢ Q) → (Q ⊢ ewp e P) → (R ⊢ ewp e P).
 Proof.
-Admitted.
+  intros H HQ m HR.
+  specialize (HQ m (H m HR)).
+  assumption.
+Qed.
 
 Lemma wp_frame P Q e v :
   Q ∗ wp e P v ⊢ wp e (Q ∗ P) v.
