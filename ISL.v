@@ -418,7 +418,25 @@ Qed.
 Lemma wp_mono_result P Q R e v:
   (R ⊢ Q) → (Q ⊢ wp e P v) → (R ⊢ wp e P v).
 Proof.
-Admitted.
+  intros H HQ m HR.
+  specialize (HQ m (H m HR)).
+  assumption.
+Qed.
+
+Lemma wp_disj_presume P Q R e v:
+  (Q ⊢ wp e P v) → (Q ⊢ wp e R v) → (Q ⊢ wp e (λ m, P m ∨ R m) v).
+Proof.
+  intros HP HR m HQ mf Hdisj.
+  specialize (HP m HQ mf Hdisj) as (m' & Hdisj' & HP & Hsteps).
+  exists m'; eauto.
+Qed.
+
+Lemma wp_disj_result P Q R e v:
+  (Q ⊢ wp e P v) → (R ⊢ wp e P v) → (λ m, (Q m) ∨ (R m)) ⊢ wp e P v.
+Proof.
+  intros HQ HR m H.
+  destruct H; auto using HQ, HR.
+Qed.
 
 (* fo there _error path_ we can mirror the definition but there are caveats
    that are implicit and I would like to point out.
@@ -446,6 +464,23 @@ Proof.
   specialize (HQ m (H m HR)).
   assumption.
 Qed.
+
+Lemma ewp_disj_presume P Q R e:
+  (Q ⊢ ewp e P) → (Q ⊢ ewp e R) → (Q ⊢ ewp e (λ m, P m ∨ R m)).
+Proof.
+  intros HP HR m HQ mf Hdisj.
+  specialize (HP m HQ mf Hdisj) as (m' & e' & Hdisj' & HP & Hsteps & Herror).
+  exists m', e'; eauto.
+Qed.
+
+Lemma ewp_disj_result P Q R e:
+  (Q ⊢ ewp e P) → (R ⊢ ewp e P) → (λ m, (Q m) ∨ (R m)) ⊢ ewp e P.
+Proof.
+  intros HQ HR m H.
+  destruct H; auto using HQ, HR.
+Qed.
+
+
 
 Lemma wp_frame P Q e v :
   Q ∗ wp e P v ⊢ wp e (Q ∗ P) v.
@@ -758,7 +793,7 @@ Proof.
   eauto using steps_single, head_step.
 Qed.
 
-Lemma wp_error P :
+Lemma ewp_error P :
   P ⊢ ewp EError P.
 Proof.
   iUnfold.
