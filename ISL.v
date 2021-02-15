@@ -277,6 +277,8 @@ Definition iPoints (l : nat) (v : val) : iProp := λ m, m = {[ l := v ]}.
 Definition iNegPoints (l : nat) : iProp := λ m, m !! l = None.
 Definition iSep (P Q : iProp) : iProp := λ m, ∃ m1 m2, P m1 ∧ Q m2 ∧ m = m1 ∪ m2 ∧ m1 ##ₘ m2 .
 Definition iWand (P Q : iProp) : iProp := λ m, ∀ m', m ##ₘ m' → P m' → Q (m' ∪ m).
+Definition iAnd (P Q : iProp) : iProp := λ m, P m ∧ Q m.
+Definition iOr (P Q : iProp) : iProp := λ m, P m ∨ Q m.
 Definition iForall {A} (P : A → iProp) : iProp := λ m, ∀ x, P x m.
 Definition iExists {A} (P : A → iProp) : iProp := λ m, ∃ x, P x m.
 Definition iPure (φ : Prop) : iProp := λ m, φ ∧ m = ∅.
@@ -285,6 +287,8 @@ Definition iOwn (m : mem) : iProp := λ m', m' = m.
 
 Notation "P ⊢ Q" := (iEntails P Q) (at level 99, Q at level 200).
 Notation "P ∗ Q" := (iSep P Q) (at level 80, right associativity).
+Notation "P ∧ Q" := (iAnd P Q) (at level 80, right associativity).
+Notation "P ∨ Q" := (iOr P Q) (at level 85, right associativity).
 Notation "l ↦ v" := (iPoints l v) (at level 20).
 Notation "'emp'" := iEmp.
 Notation "P -∗ Q" := (iWand P Q) (at level 99, Q at level 200, right associativity).
@@ -333,6 +337,24 @@ Proof. duh. Qed.
 
 Lemma iWand_elim P Q : P ∗ (P -∗ Q) ⊢ Q.
 Proof. duh. Qed.
+
+Lemma iAnd_intro (P Q R : iProp) : (R ⊢ P) → (R ⊢ Q) → R ⊢ P ∧ Q.
+Proof. Admitted.
+
+Lemma iAnd_elim_l (P Q : iProp) : P ∧ Q ⊢ P.
+Proof. Admitted.
+
+Lemma iAnd_elim_r (P Q : iProp) : P ∧ Q ⊢ Q.
+Proof. Admitted.
+
+Lemma iOr_intro_l (P Q : iProp) : P ⊢ P ∨ Q.
+Proof. Admitted.
+
+Lemma iOr_intro_r (P Q : iProp) : Q ⊢ P ∨ Q.
+Proof. Admitted.
+
+Lemma iOr_elim (P Q R : iProp) : (P ⊢ R) → (Q ⊢ R) → P ∨ Q ⊢ R.
+Proof. Admitted.
 
 Lemma iForall_intro {A} P (Q : A → iProp) : (∀ x, P ⊢ Q x) → (P ⊢ All x, Q x).
 Proof. duh. Qed.
