@@ -269,7 +269,20 @@ Proof.
     subst.
     auto using step_context.
 Qed.
-    
+
+Lemma step_error e m m':
+  False ↔ step (EError) m e m'.
+Proof.
+  split; auto.
+  - intro. exfalso. assumption.
+  - intro.
+    inversion H.
+    destruct E; simpl in *.
+    + subst.
+      inversion H1.
+    + destruct c; simpl in *; discriminate.
+Qed.
+
 (* later on we can define is_error as an expression that does not step anymore
    and to actually get to prove errors about resources we need some lemmas
    to discharge this to assumptions on the heaps *)
