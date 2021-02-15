@@ -301,7 +301,7 @@ Notation "'Ex' x1 .. xn , P" :=
   (at level 200, x1 binder, xn binder, right associativity).
 
 
-Ltac iUnfold := unfold iEmp, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails.
+Ltac iUnfold := unfold iEmp, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails, iAnd, iOr.
 Ltac duh := iUnfold;
   naive_solver (
     rewrite ?map_union_assoc ?left_id ?right_id;
@@ -339,22 +339,22 @@ Lemma iWand_elim P Q : P ∗ (P -∗ Q) ⊢ Q.
 Proof. duh. Qed.
 
 Lemma iAnd_intro (P Q R : iProp) : (R ⊢ P) → (R ⊢ Q) → R ⊢ P ∧ Q.
-Proof. Admitted.
+Proof. duh. Qed.
 
 Lemma iAnd_elim_l (P Q : iProp) : P ∧ Q ⊢ P.
-Proof. Admitted.
+Proof. duh. Qed.
 
 Lemma iAnd_elim_r (P Q : iProp) : P ∧ Q ⊢ Q.
-Proof. Admitted.
+Proof. duh. Qed.
 
 Lemma iOr_intro_l (P Q : iProp) : P ⊢ P ∨ Q.
-Proof. Admitted.
+Proof. duh. Qed.
 
 Lemma iOr_intro_r (P Q : iProp) : Q ⊢ P ∨ Q.
-Proof. Admitted.
+Proof. duh. Qed.
 
 Lemma iOr_elim (P Q R : iProp) : (P ⊢ R) → (Q ⊢ R) → P ∨ Q ⊢ R.
-Proof. Admitted.
+Proof. duh. Qed.
 
 Lemma iForall_intro {A} P (Q : A → iProp) : (∀ x, P ⊢ Q x) → (P ⊢ All x, Q x).
 Proof. duh. Qed.
@@ -978,14 +978,15 @@ Plan:
 - [x] Prove the rule for wp while
 - [x] Think about combining iReaches/iError
 - [x] Delete the iReaches stuff
-- [ ] Change definition of is_error to use step instead of head_step
-- [ ] Create a new file in which we define Hoare triples in terms of wp/ewp
-  ```
-  Definition reaches (P : iProp) (e : expr) (Q : val → iProp) :=
-    ∀ v, iEntails (Q v) (wp P e v).
-
-  Definition has_error e := ∃ m, iOwn m ⊢ ewp emp e.
-  ```
+- [x] Change definition of is_error to use step instead of head_step
+- [ ] Create a document with all the primitive rules that you have proved
+- [ ] Write down the intuitive meaning of the wp/ewp and entailment
+        What does wp e P v mean?
+        What does Q ⊢ wp e P v mean?
+        (jules: reachable P e v ⊣ Q)
+- [ ] Prove the admitted rules for ∨ and ∧
+- [ ] Refactor ewp/wp to use this option
+- [ ] Define Hoare triples in terms of wp/ewp
 - [ ] Put all the rules for the Hoare triples from the paper as lemmas in that file (Admitted)
 - [ ] Think about which additional rules for wp/ewp we need to prove all the rules in the paper using those lemmas
 - [ ] Prove all the rules in the paper using the rules for wp/ewp
