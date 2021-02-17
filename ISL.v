@@ -20,6 +20,21 @@ Definition is_val e :=
 (* our expression is an error when we cannot step anymore in the reduction *)
 Definition is_error e h := not (is_val e) ∧ ∀ e' h', not (step e h e' h').
 
+(* to unify the two definitions of wp/ewp later on we rely on this new predicate *)
+Definition is_error_or_val (v : option val) (e : expr) (m : mem): Prop :=
+  match v with
+  | None => is_error e m
+  | Some v => e = EVal v
+end.
+
+(* is_error relies on _step_ to say that an expression does not step
+   but we only have an operational semantic for not stepping that works
+   on head_step instead.
+
+   This section is about lifting this idea of non stepping to expressions
+   reducing in contexes.
+*)
+
 Lemma head_step_fill_item_val a e e' h h' :
   head_step (fill_item a e) h e' h' → is_val e.
 Proof.
@@ -70,6 +85,9 @@ Proof.
   induction E; simpl; eauto using is_error_fill_item.
 Qed.
 
+(* finally we can now start messing around with our definitions
+   and prove that some expressions will error *)
+
 Example simple_error := is_error EError ∅.
 
 Lemma our_first_error : simple_error.
@@ -92,6 +110,8 @@ Proof.
     * simpl in *; subst; inversion H1.
     * destruct c; simpl in *; discriminate.
 Qed.
+
+(* and we can get errors also from using resources wrongly *)
 
 Lemma resource_error l: is_error (EFree (EVal (VLoc l))) ∅.
 Proof.
@@ -116,8 +136,12 @@ Qed.
  *)
 Definition contains_error e h := ∃ e' h', steps e h e' h' ∧ is_error e' h'.
 
+(* the EAmb expression will only give us natural values but we are gonna use it
+   to express non determinism by reducing in IfCtx
+*)
 Definition amb_bool := (EOp EqOp EAmb (EVal (VNat 0))).
 
+(* and finally prove that we can always get any two booleans *)
 Lemma amb_is_ambiguous (b : bool) (m : mem) : steps amb_bool m (EVal (VBool b)) m.
 Proof.
   unfold amb_bool.
@@ -130,7 +154,7 @@ Proof.
   destruct b; auto using head_step.
 Qed.
 
-
+(* now this example may error if the test evaluates to true *)
 Example may_error := (EIf amb_bool EError (EVal VUnit)).
 
 Lemma may_error_contains_error : ∀ m,  contains_error may_error m.
@@ -272,6 +296,17 @@ Proof.
 Qed.
 
 Definition iProp := mem → Prop.
+
+(* m' satisfies this predicate only if there exists m ∈ P such that m' is reachable while executing
+   program e starting from m.
+
+   As a program might error we encode this choice with the optional end value v; Some v encodes
+   that the computation ended with value v while None encodes the fact that we are stuck in an
+   error. *)
+Definition post (e : expr) (P : iProp) (v : option val) : iProp :=
+  λ m', ∀ mf, m' ##ₘ mf → (∃ m e', m ##ₘ mf ∧ P m ∧ steps e (m ∪ mf) e' (m' ∪ mf) ∧ is_error_or_val v e' (m' ∪ mf)).
+
+
 Definition iEmp : iProp := λ m, m = ∅.
 Definition iPoints (l : nat) (v : val) : iProp := λ m, m = {[ l := v ]}.
 Definition iNegPoints (l : nat) : iProp := λ m, m !! l = None.
