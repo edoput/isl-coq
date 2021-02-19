@@ -721,47 +721,31 @@ Proof.
   apply <- step_error. eassumption.
 Qed.
 
-Lemma post_load l v:
-  l ↦ v ⊢ post (ELoad (EVal (VLoc l))) (l ↦ v) (Some v).
+Lemma post_alloc l v:
+  l ↦ v ⊢ post (EAlloc (EVal v)) (iNegPoints l) (Some (VLoc l)).
 Proof.
   intros m H mf Hdisj.
-  exists m, (EVal v).
-  split; auto.
-  split; auto.
+  exists ∅, (EVal (VLoc l)).
   split.
+  solve_map_disjoint.
+  split.
+  apply lookup_empty.
+  split.
+  unfold iPoints in H.
+  subst.
   eapply steps_step.
-  - apply step_load.
-    apply lookup_union_Some_l.
-    unfold iPoints in H.
-    subst.
-    apply lookup_singleton.
-  - apply steps_refl.
-  - simpl; reflexivity.
-Qed.
-
-Lemma post_load_err l:
-  iNegPoints l ⊢ post (ELoad (EVal (VLoc l))) (iNegPoints l) None.
-Proof.
-  intros m H mf Hdisj.
-  exists m, (ELoad (EVal (VLoc l))).
-  split; auto.
-  split; auto.
-  split.
-  - apply steps_refl.
-  - simpl.
-    unfold is_error.
-    split; auto.
-    intros e  m' Hstep.
-    erewrite step_load_inv in Hstep.
-    destruct Hstep as ( v & ( -> & Hm & _)).
-    unfold iNegPoints in H.
-    rewrite * lookup_union_Some in Hm by assumption.
-    destruct Hm as [Hlookup_m | Hlookup_mf].
-    + rewrite H in Hlookup_m.
-      discriminate.
-    + admit.
+  - apply step_alloc_inv.
+    exists l.
+    split.
+    eauto.
+    split.
+    admit.
+    eauto.
+  - rewrite insert_union_l.
+    rewrite insert_empty.
+    apply steps_refl.
+  - simpl; auto.
 Admitted.
-
 
 Lemma post_free l v:
   iNegPoints l ⊢ post (EFree (EVal (VLoc l))) (l ↦ v) (Some VUnit).
@@ -808,60 +792,82 @@ Proof.
   split; eauto.
   admit.
 Admitted.
-
-Lemma wp_store_val e P l v:
-  wp (EStore (EVal l) (EVal v)) (wp e P v) VUnit ⊢
-     wp (EStore (EVal l) e) P VUnit.
+    
+Lemma post_load l v:
+  l ↦ v ⊢ post (ELoad (EVal (VLoc l))) (l ↦ v) (Some v).
 Proof.
-  rewrite <- fill_store_r.
-  rewrite <- fill_store_r at 1.
-  apply wp_ctx.
+  intros m H mf Hdisj.
+  exists m, (EVal v).
+  split; auto.
+  split; auto.
+  split.
+  eapply steps_step.
+  - apply step_load.
+    apply lookup_union_Some_l.
+    unfold iPoints in H.
+    subst.
+    apply lookup_singleton.
+  - apply steps_refl.
+  - simpl; reflexivity.
 Qed.
 
-Lemma ewp_store_val e P l v:
-  ewp (EStore (EVal l) (EVal v)) (wp e P v) ⊢
-     ewp (EStore (EVal l) e) P.
+Lemma post_load_err l:
+  iNegPoints l ⊢ post (ELoad (EVal (VLoc l))) (iNegPoints l) None.
 Proof.
-  rewrite <- fill_store_r.
-  rewrite <- fill_store_r at 1.
-  apply ewp_ctx.
-Qed.
+  intros m H mf Hdisj.
+  exists m, (ELoad (EVal (VLoc l))).
+  split; auto.
+  split; auto.
+  split.
+  - apply steps_refl.
+  - simpl.
+    unfold is_error.
+    split; auto.
+    intros e  m' Hstep.
+    erewrite step_load_inv in Hstep.
+    destruct Hstep as ( v & ( -> & Hm & _)).
+    unfold iNegPoints in H.
+    rewrite * lookup_union_Some in Hm by assumption.
+    destruct Hm as [Hlookup_m | Hlookup_mf].
+    + rewrite H in Hlookup_m.
+      discriminate.
+    + admit.
+Admitted.
 
-Lemma wp_store_loc e P l v:
-  wp (EStore (EVal l) (EVal v)) (wp e P l) VUnit ⊢
-     wp (EStore e (EVal v)) P VUnit.
+Lemma post_store l v v':
+  (l ↦ v') ⊢ post (EStore (EVal (VLoc l)) (EVal v')) (l ↦ v) (Some VUnit).
 Proof.
-  rewrite <- fill_store_l.
-  rewrite <- fill_store_l at 1.
-  apply wp_ctx.
-Qed.
+  intros m H mf Hdisj.
+  exists (<[ l := v ]> m), (EVal VUnit).
+  split.
+  admit.
+  split.
+  unfold iPoints in *.
+  subst m.
+  apply insert_singleton.
+  split.
+  eapply steps_step.
+  apply step_store.
+  - intro.
+    erewrite lookup_union_None in H0.
+    destruct H0 as (Hm & Hmf).
+    unfold iPoints in H.
+    subst m.
+    rewrite insert_singleton in Hm.
+    rewrite lookup_singleton in Hm.
+    discriminate.
+  - unfold iPoints in *.
+    subst m.
+    rewrite insert_union_l.
+    rewrite ! insert_singleton.
+    apply steps_refl.
+  - simpl; reflexivity.
+Admitted.
 
-Lemma ewp_store_loc e P l v:
-  ewp (EStore (EVal l) (EVal v)) (wp e P l) ⊢
-     ewp (EStore e (EVal v)) P.
+Lemma post_store_err l v:
+  (iNegPoints l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iNegPoints l) None.
 Proof.
-  rewrite <- fill_store_l.
-  rewrite <- fill_store_l at 1.
-  apply ewp_ctx.
-Qed.
-
-Lemma wp_load e P l v:
-  wp (ELoad (EVal l)) (wp e P l) v ⊢
-     wp (ELoad e) P v.
-Proof.
-  rewrite <- fill_load.
-  rewrite <- fill_load at 1.
-  apply wp_ctx.
-Qed.
-
-Lemma ewp_load e P l:
-  ewp (ELoad (EVal l)) (wp e P l) ⊢
-     ewp (ELoad e) P.
-Proof.
-  rewrite <- fill_load.
-  rewrite <- fill_load at 1.
-  apply ewp_ctx.
-Qed.
+Admitted.
 
 (*
 
