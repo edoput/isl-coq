@@ -588,47 +588,6 @@ Proof.
   split; auto.
   eauto using steps_context, is_error_fill.
 Qed.
-
-Lemma post_load l v:
-  l ↦ v ⊢ post (ELoad (EVal (VLoc l))) (l ↦ v) (Some v).
-Proof.
-  intros m H mf Hdisj.
-  exists m, (EVal v).
-  split; auto.
-  split; auto.
-  split.
-  eapply steps_step.
-  - apply step_load.
-    apply lookup_union_Some_l.
-    unfold iPoints in H.
-    subst.
-    apply lookup_singleton.
-  - apply steps_refl.
-  - simpl; reflexivity.
-Qed.
-
-Lemma post_load_err l:
-  iNegPoints l ⊢ post (ELoad (EVal (VLoc l))) (iNegPoints l) None.
-Proof.
-  intros m H mf Hdisj.
-  exists m, (ELoad (EVal (VLoc l))).
-  split; auto.
-  split; auto.
-  split.
-  - apply steps_refl.
-  - simpl.
-    unfold is_error.
-    split; auto.
-    intros e  m' Hstep.
-    erewrite step_load_inv in Hstep.
-    destruct Hstep as ( v & ( -> & Hm & _)).
-    unfold iNegPoints in H.
-    rewrite * lookup_union_Some in Hm by assumption.
-    destruct Hm as [Hlookup_m | Hlookup_mf].
-    + rewrite H in Hlookup_m.
-      discriminate.
-    + admit.
-Admitted.
     
 Lemma post_let x v w e1 e2 P :
   post (subst x w e2) (post e1 P (Some w)) v ⊢ post (ELet x e1 e2) P v.
@@ -747,60 +706,93 @@ Proof.
   apply <- step_error. eassumption.
 Qed.
 
-
-Fail Lemma wp_alloc v P :
-  iPure True ⊢ Ex l, P ∧ (fun m => m !! l = None) ∧ wp (EAlloc (EVal v)) P (VLoc l).
-
-Lemma wp_alloc e P l v:
-  wp (EAlloc (EVal v)) (wp e P v) (VLoc l) ⊢ wp (EAlloc e) P (VLoc l).
+Lemma post_load l v:
+  l ↦ v ⊢ post (ELoad (EVal (VLoc l))) (l ↦ v) (Some v).
 Proof.
-  rewrite <- fill_alloc.
-  rewrite <- fill_alloc at 1.
-  apply wp_ctx.
+  intros m H mf Hdisj.
+  exists m, (EVal v).
+  split; auto.
+  split; auto.
+  split.
+  eapply steps_step.
+  - apply step_load.
+    apply lookup_union_Some_l.
+    unfold iPoints in H.
+    subst.
+    apply lookup_singleton.
+  - apply steps_refl.
+  - simpl; reflexivity.
 Qed.
 
-Definition e := EAlloc (EVal (VNat 5)).
-Lemma bar : iPure True ⊢ wp e emp (VLoc 0).
+Lemma post_load_err l:
+  iNegPoints l ⊢ post (ELoad (EVal (VLoc l))) (iNegPoints l) None.
 Proof.
-  eapply iEntails_trans.
+  intros m H mf Hdisj.
+  exists m, (ELoad (EVal (VLoc l))).
+  split; auto.
+  split; auto.
+  split.
+  - apply steps_refl.
+  - simpl.
+    unfold is_error.
+    split; auto.
+    intros e  m' Hstep.
+    erewrite step_load_inv in Hstep.
+    destruct Hstep as ( v & ( -> & Hm & _)).
+    unfold iNegPoints in H.
+    rewrite * lookup_union_Some in Hm by assumption.
+    destruct Hm as [Hlookup_m | Hlookup_mf].
+    + rewrite H in Hlookup_m.
+      discriminate.
+    + admit.
 Admitted.
 
-(* this does not make much sense now as it describes resource exhaustion, in our
-   assumptions there is no way to run out of cells to allocate.
-*)
-Lemma ewp_alloc e P v:
-  ewp (EAlloc (EVal v)) (wp e P v) ⊢ ewp (EAlloc e) P.
-Proof.
-  rewrite <- fill_alloc.
-  rewrite <- fill_alloc at 1.
-  apply ewp_ctx.
-Qed.
 
-(* this should be doable with contains_error *)
-Lemma ewp_alloc' e P:
-  (ewp e P) ⊢ ewp (EAlloc e) P.
+Lemma post_free l v:
+  iNegPoints l ⊢ post (EFree (EVal (VLoc l))) (l ↦ v) (Some VUnit).
 Proof.
-  intros m H.
-  rewrite <- fill_alloc.
-  apply ewp_ctx'.
-  assumption.
-Qed.
+  intros m H mf Hdisj.
+  exists (<[ l := v ]> m), (EVal VUnit).
+  split.
+  - unfold iNegPoints in H. admit.
+  - split.
+    + admit.
+    + split.
+      eapply steps_step.
+      * eapply step_free.
+        intro.
+        rewrite <- insert_union_l in H0.
+        erewrite lookup_insert in H0.
+        discriminate.
+      * rewrite <- insert_union_l.
+        rewrite delete_insert.
+        apply steps_refl.
+        apply lookup_union_None.
+        split; auto.
+        admit.
+      * simpl; auto.
+Admitted.
 
-Lemma wp_free e P l:
-  wp (EFree (EVal l)) (wp e P l) VUnit ⊢ wp (EFree e) P VUnit.
+Lemma post_free_err l:
+  iNegPoints l  ⊢ post (EFree (EVal (VLoc l))) (iNegPoints l) None.
 Proof.
-  rewrite <- fill_free.
-  rewrite <- fill_free at 1.
-  apply wp_ctx.
-Qed.
-
-Lemma ewp_free e P l:
-  ewp (EFree (EVal l)) (wp e P l) ⊢ ewp (EFree e) P.
-Proof.
-  rewrite <- fill_free.
-  rewrite <- fill_free at 1.
-  apply ewp_ctx.
-Qed.
+  intros m H mf Hdisj.
+  exists m, (EFree (EVal (VLoc l))).
+  split; eauto.
+  split; eauto.
+  split.
+  apply steps_refl.
+  simpl.
+  unfold is_error.
+  split; auto.
+  intros e' m' Hstep.
+  erewrite step_free_inv in Hstep.
+  destruct Hstep as (_ & Hlookup & _).
+  apply Hlookup.
+  apply lookup_union_None.
+  split; eauto.
+  admit.
+Admitted.
 
 Lemma wp_store_val e P l v:
   wp (EStore (EVal l) (EVal v)) (wp e P v) VUnit ⊢
