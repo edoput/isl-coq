@@ -614,7 +614,7 @@ Proof.
   - auto.
 Qed.
 
-Lemma wp_seq e1 e2 P w v:
+Lemma post_seq e1 e2 P w v:
   post e2 (post e1 P (Some w)) v ⊢ post (ESeq e1 e2) P v.
 Proof.
   intros m H.
@@ -631,6 +631,15 @@ Proof.
   - apply steps_seq_val.
     apply steps_refl.
   - auto.
+Qed.
+
+Lemma post_seq' e1 e2 P:
+  post e1 P None ⊢ post (ESeq e1 e2) P None.
+Proof.
+  intros m H.
+  rewrite <- fill_seq.
+  apply post_ctx'.
+  assumption.
 Qed.
 
 Lemma post_if_true t e1 e2 P v:
@@ -665,7 +674,7 @@ Proof.
   eapply steps_mono; auto using steps_if_false.
 Qed.
 
-Lemma wp_while t e P v:
+Lemma post_while t e P v:
   post (EIf t (ESeq e (EWhile t e)) (EVal VUnit)) P v ⊢ post (EWhile t e) P v.
 Proof.
   iUnfold.
