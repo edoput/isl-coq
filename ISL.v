@@ -589,18 +589,47 @@ Proof.
   eauto using steps_context, is_error_fill.
 Qed.
 
-Lemma ewp_ctx' E e P:
-  ewp e P ⊢ ewp (fill E e) P.
+Lemma post_load l v:
+  l ↦ v ⊢ post (ELoad (EVal (VLoc l))) (l ↦ v) (Some v).
 Proof.
-  intros m H.
-  intros mf Hdisj.
-  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps' & Herror).
-  exists m', (fill E e').
+  intros m H mf Hdisj.
+  exists m, (EVal v).
   split; auto.
   split; auto.
-  eauto using steps_context, is_error_fill.
+  split.
+  eapply steps_step.
+  - apply step_load.
+    apply lookup_union_Some_l.
+    unfold iPoints in H.
+    subst.
+    apply lookup_singleton.
+  - apply steps_refl.
+  - simpl; reflexivity.
 Qed.
 
+Lemma post_load_err l:
+  iNegPoints l ⊢ post (ELoad (EVal (VLoc l))) (iNegPoints l) None.
+Proof.
+  intros m H mf Hdisj.
+  exists m, (ELoad (EVal (VLoc l))).
+  split; auto.
+  split; auto.
+  split.
+  - apply steps_refl.
+  - simpl.
+    unfold is_error.
+    split; auto.
+    intros e  m' Hstep.
+    erewrite step_load_inv in Hstep.
+    destruct Hstep as ( v & ( -> & Hm & _)).
+    unfold iNegPoints in H.
+    rewrite * lookup_union_Some in Hm by assumption.
+    destruct Hm as [Hlookup_m | Hlookup_mf].
+    + rewrite H in Hlookup_m.
+      discriminate.
+    + admit.
+Admitted.
+    
 Lemma wp_let x v w e1 e2 P :
   wp (subst x w e2) (wp e1 P w) v ⊢ wp (ELet x e1 e2) P v.
 Proof.
