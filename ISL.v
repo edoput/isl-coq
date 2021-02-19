@@ -439,6 +439,21 @@ Proof. duh. Qed.
   Maybe that can be used to figure out how to do it using an analogue of WP in incorrectness logic.
  *)
 
+
+(* as we are working in incorrectness logic there is a shift in which relation there
+   is between the presume P and the result Q of a triple.
+
+   In incorrectness logic a triple [P]C[Q]is true when the post(C)P over approximate Q
+   while for any over approximation logic the triple {P}C{Q} is true when post(C)P is a
+   under approximation of Q.
+
+   This inversion of the _subset of_ changes the entailment order: IL triples [P]C[Q] are expressed
+   as Q ⊢ post(C)P while correctness triples {P}C{Q} are expressed as post(C)P ⊢ Q.
+
+   For IL triples then the post(C)P set over approximates the set Q and this means that
+   for any m ∈ Q there exists a m' ∈ P such that (m', m) ∈ [C].
+ *)
+
 (* The path from the lectures does not work as we _need_ P here (in wp)
    and definining hoare as P ⊢ wp P e Q obviously does not make all that sense;
    this is why we need to figure out an alternative of WP in incorrectness logic.
@@ -448,106 +463,54 @@ Proof. duh. Qed.
    along with the correct anti-frame.
  *)
 
-Definition wp (e : expr) (P : iProp) (v : val) : iProp :=
-(* first attempt:  notice how we have the _disjoint_ predicate on the first
-   this makes it possible to compose more _wp_ in the context while this one
-   does not work.
-*)
-  λ m', ∀ mf, m' ##ₘ mf → (∃ m, m ##ₘ mf ∧ P m ∧ steps e (m ∪ mf) (EVal v) (m' ∪ mf)).
-(*
-   The important part of this is the m ##ₘ mf as it says there exists
-   an anti-frame from which to start
- *)
-
 (* if we increase the set of initial states then we still cover all the final states *)
-Lemma wp_mono_presume P R e v:
-  (P ⊢ R) → wp e P v ⊢ wp e R v.
+Lemma post_mono_presume P R e v:
+  (P ⊢ R) → post e P v ⊢ post e R v.
 Proof.
   intro.
   intros m HP.
   intros mf Hdisj.
-  specialize (HP mf Hdisj) as (m' & Hdisj' & HP & Hsteps).
-  exists m'.
-  eauto.
-Qed.
-
-(* if we shrink the set of final heap states then we still cover them all *)
-Lemma wp_mono_result P Q R e v:
-  (R ⊢ Q) → (Q ⊢ wp e P v) → (R ⊢ wp e P v).
-Proof.
-  intros H HQ m HR.
-  specialize (HQ m (H m HR)).
-  assumption.
-Qed.
-
-Lemma wp_disj_presume P Q R e v:
-  (Q ⊢ wp e P v) → (Q ⊢ wp e R v) → (Q ⊢ wp e (λ m, P m ∨ R m) v).
-Proof.
-  intros HP HR m HQ mf Hdisj.
-  specialize (HP m HQ mf Hdisj) as (m' & Hdisj' & HP & Hsteps).
-  exists m'; eauto.
-Qed.
-
-Lemma wp_disj_result P Q R e v:
-  (Q ⊢ wp e P v) → (R ⊢ wp e P v) → (λ m, (Q m) ∨ (R m)) ⊢ wp e P v.
-Proof.
-  intros HQ HR m H.
-  destruct H; auto using HQ, HR.
-Qed.
-
-(* fo there _error path_ we can mirror the definition but there are caveats
-   that are implicit and I would like to point out.
-   - asking m' ##ₘ mf → is_error e' (m' ∪ mf) is to have the _footprint_ of e be out of mf
-*)
-Definition ewp (e : expr) (P : iProp) : iProp :=
-  λ m', ∀ mf, m' ##ₘ mf → (∃ m e', m ##ₘ mf ∧ P m ∧ steps e (m ∪ mf) e' (m' ∪ mf) ∧ is_error e' (m' ∪ mf)).
-
-Lemma ewp_mono_presume P R e:
-  (P ⊢ R) → ewp e P ⊢ ewp e R.
-Proof.
-  intro.
-  intros m HP.
-  intros mf Hdisj.
-  specialize (HP mf Hdisj) as (m' & e' & Hdisj' & HP & Hsteps & Herror).
+  specialize (HP mf Hdisj) as (m' & e' & Hdisj' & HP & Hsteps).
   exists m', e'.
   eauto.
 Qed.
 
 (* if we shrink the set of final heap states then we still cover them all *)
-Lemma ewp_mono_result P Q R e:
-  (R ⊢ Q) → (Q ⊢ ewp e P) → (R ⊢ ewp e P).
+Lemma post_mono_result P Q R e v:
+  (R ⊢ Q) → (Q ⊢ post e P v) → (R ⊢ post e P v).
 Proof.
   intros H HQ m HR.
   specialize (HQ m (H m HR)).
   assumption.
 Qed.
 
-Lemma ewp_disj_presume P Q R e:
-  (Q ⊢ ewp e P) → (Q ⊢ ewp e R) → (Q ⊢ ewp e (λ m, P m ∨ R m)).
+Lemma post_disj_presume P Q R e v:
+  (Q ⊢ post e P v) → (Q ⊢ post e R v) → (Q ⊢ post e (P ∨ R) v).
 Proof.
   intros HP HR m HQ mf Hdisj.
-  specialize (HP m HQ mf Hdisj) as (m' & e' & Hdisj' & HP & Hsteps & Herror).
-  exists m', e'; eauto.
+  specialize (HP m HQ mf Hdisj) as (m' & e' & Hdisj' & HP & Hsteps).
+  exists m', e'.
+  split. assumption.
+  split. apply iOr_intro_l. assumption.
+  assumption.
 Qed.
 
-Lemma ewp_disj_result P Q R e:
-  (Q ⊢ ewp e P) → (R ⊢ ewp e P) → (λ m, (Q m) ∨ (R m)) ⊢ ewp e P.
+Lemma post_disj_result P Q R e v:
+  (Q ⊢ post e P v) → (R ⊢ post e P v) → (Q ∨ R) ⊢ post e P v.
 Proof.
   intros HQ HR m H.
   destruct H; auto using HQ, HR.
 Qed.
 
-
-
-Lemma wp_frame P Q e v :
-  Q ∗ wp e P v ⊢ wp e (Q ∗ P) v.
+Lemma post_frame P Q e v :
+  Q ∗ post e P v ⊢ post e (Q ∗ P) v.
 Proof.
   iUnfold.
   intros mT (m & m' & Hq & Hwp & -> & Hdisj) mf Hdisj'.
-  unfold wp in *.
-  edestruct (Hwp (m ∪ mf)) as (m0 & Hdisj'' & Hp & Hsteps).
+  unfold post in *.
+  edestruct (Hwp (m ∪ mf)) as (m0 & e0 & Hdisj'' & Hp & Hsteps).
   { solve_map_disjoint. }
-  exists (m0 ∪ m).
+  exists (m0 ∪ m), e0.
   split. { solve_map_disjoint. }
   split. {
     do 2 eexists.
@@ -561,37 +524,6 @@ Proof.
   rewrite map_union_comm; solve_map_disjoint.
 Qed.
 
-Lemma ewp_frame P Q e:
-  Q ∗ ewp e P ⊢ ewp e (Q ∗ P).
-Proof.
-  iUnfold.
-  intros mT (m & m' & Hq & Hewp & -> & Hdisj) mf Hdisj'.
-  unfold ewp in *.
-  assert (m' ##ₘ (m ∪ mf)).
-  { solve_map_disjoint. }
-  specialize (Hewp (m ∪ mf) H) as (m'' & e' & Hdisj'' & Hp & Hsteps & Herror).
-  (* now in Hsteps we see that the frame contains the heap m satisfying Q
-     but because of being disjoing we are gonna rewrite things to make Hsteps
-     satisfy our goal *)
-  exists (m ∪ m''), e'.
-  split. solve_map_disjoint.
-  split.
-  exists m, m''; split; auto.
-  split; auto.
-  split; auto.
-  solve_map_disjoint.
-  rewrite ! map_union_assoc in Hsteps Herror.
-  split.
-  - rewrite (map_union_comm m'' m) in Hsteps.
-    rewrite (map_union_comm m' m) in Hsteps.
-    assumption.
-    do 2 solve_map_disjoint.
-    eapply map_disjoint_weaken_r.
-    eassumption.
-    apply map_union_subseteq_l.
-  - rewrite (map_union_comm m m'); auto.
-Qed.
-
 (* the incorrectness triple is valid if for any state describe by (Q v)
    we can reach it from a state in P after executing P under final value v.
 
@@ -599,56 +531,62 @@ Qed.
 
    NB this is still correct for Q v = false as no heap satisfies false *)
 Definition hoare (P : iProp) (e : expr) (Q : val -> iProp) v : Prop :=
-  (Q v) ⊢ (wp e P v).
+  (Q v) ⊢ (post e P (Some v)).
 
-Lemma wp_val v (Q : val -> iProp) :
-  (Q v) ⊢ wp (EVal v) (Q v) v.
+Definition hoare_err (P Q : iProp) (e : expr) : Prop :=
+  Q ⊢ (post e P None).
+
+Lemma post_val v (Q : val -> iProp) :
+  (Q v) ⊢ post (EVal v) (Q v) (Some v).
 Proof.
   iUnfold.
   intros.
-  unfold wp.
-  intros.
-  eexists m.
+  intros mf Hdisj.
+  eexists m, (EVal v).
+  split; auto.
+  split; auto.
   split; auto using steps_refl.
+  simpl.
+  reflexivity.
 Qed.
 
 (* how does this work with reducing anywhere in an expression? *)
 
-Lemma wp_ctx E e P v w :
-  wp (fill E (EVal w)) (wp e P w) v ⊢ wp (fill E e) P v.
+Lemma post_ctx E e P v w :
+  post (fill E (EVal w)) (post e P (Some w)) v ⊢ post (fill E e) P v.
 Proof.
-  unfold iEntails.
-  intros.
-  intros mf Hdisj.
-  unfold wp in H at 1.
-  specialize (H mf Hdisj) as (m' & Hdisj' & H' & Hsteps').
-  specialize (H' mf Hdisj') as (m'' & Hdisj'' & H'' & Hsteps'').
-  exists m''.
-  split; auto.
-  split; auto.
-  eapply steps_mono.
-  - apply steps_context.
-    eassumption.
-  - assumption.
+  intros m H mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps' & Herror').
+  specialize (H' mf Hdisj') as (m'' & e'' & Hdisj'' & H'' & Hsteps'' & Herror'').
+  destruct v; simpl in *; subst.
+  - exists m'', (EVal v).
+    split; auto.
+    split; auto.
+    split; auto.
+    eapply steps_mono.
+    + apply steps_context.
+      eassumption.
+    + assumption.
+  - exists m'', e'.
+    split; auto.
+    split; auto.
+    split; auto.
+    eapply steps_mono.
+    + apply steps_context.
+      eassumption.
+    + assumption.
 Qed.
 
-
-Lemma ewp_ctx E e P w:
-  ewp (fill E (EVal w)) (wp e P w) ⊢ ewp (fill E e) P.
+Lemma post_ctx' E e P:
+  post e P None ⊢ post (fill E e) P None.
 Proof.
-  unfold iEntails.
-  intros.
-  intros mf Hdisj.
+  intros m H mf Hdisj.
   specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps' & Herror).
-  specialize (H' mf Hdisj') as (m'' & Hdisj'' & H'' & Hsteps'').
-  exists m'', e'.
+  simpl in *.
+  exists m', (fill E e').
   split; auto.
   split; auto.
-  split; auto.
-  eapply steps_mono.
-  - apply steps_context.
-    eassumption.
-  - assumption.
+  eauto using steps_context, is_error_fill.
 Qed.
 
 Lemma ewp_ctx' E e P:
