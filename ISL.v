@@ -464,13 +464,11 @@ Proof. duh. Qed.
  *)
 
 (* if we increase the set of initial states then we still cover all the final states *)
-Lemma post_mono_presume P R e v:
-  (P ⊢ R) → post e P v ⊢ post e R v.
+Lemma post_mono_presume P R Q e v:
+  (P ⊢ R) → (Q ⊢ post e P v) → (Q ⊢ post e R v).
 Proof.
-  intro.
-  intros m HP.
-  intros mf Hdisj.
-  specialize (HP mf Hdisj) as (m' & e' & Hdisj' & HP & Hsteps).
+  intros H HP m HQ mf Hdisj.
+  specialize (HP m HQ mf Hdisj) as (m' & e' & Hdisj' & HP & Hsteps & Herror).
   exists m', e'.
   eauto.
 Qed.
@@ -482,6 +480,14 @@ Proof.
   intros H HQ m HR.
   specialize (HQ m (H m HR)).
   assumption.
+Qed.
+
+Lemma post_cons P P' Q Q' e v:
+  (P ⊢ P') → (Q' ⊢ Q) → (Q ⊢ post e P v) → (Q' ⊢ post e P' v).
+Proof.
+  intros HP HQ H.
+  eapply iEntails_trans. eauto.
+  eapply post_mono_presume; eassumption.
 Qed.
 
 Lemma post_disj_presume P Q R e v:
@@ -527,7 +533,7 @@ Qed.
 (* the incorrectness triple is valid if for any state describe by (Q v)
    we can reach it from a state in P after executing P under final value v.
 
-   Point wise entailment here represents the subset relation so (Q v) ⊂ wp e P v
+   Point wise entailment here represents the subset relation so (Q v) ⊂ post e P v
 
    NB this is still correct for Q v = false as no heap satisfies false *)
 Definition hoare (P : iProp) (e : expr) (Q : val -> iProp) v : Prop :=
@@ -891,9 +897,9 @@ Plan:
         What does wp e P v mean?
         What does Q ⊢ wp e P v mean?
         (jules: reachable P e v ⊣ Q)
-- [ ] Prove the admitted rules for ∨ and ∧
-- [ ] Refactor ewp/wp to use this option
-- [ ] Define Hoare triples in terms of wp/ewp
+- [x] Prove the admitted rules for ∨ and ∧
+- [x] Refactor ewp/wp to use this option
+- [x] Define Hoare triples in terms of wp/ewp
 - [ ] Put all the rules for the Hoare triples from the paper as lemmas in that file (Admitted)
 - [ ] Think about which additional rules for wp/ewp we need to prove all the rules in the paper using those lemmas
 - [ ] Prove all the rules in the paper using the rules for wp/ewp
