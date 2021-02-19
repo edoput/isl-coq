@@ -630,16 +630,17 @@ Proof.
     + admit.
 Admitted.
     
-Lemma wp_let x v w e1 e2 P :
-  wp (subst x w e2) (wp e1 P w) v ⊢ wp (ELet x e1 e2) P v.
+Lemma post_let x v w e1 e2 P :
+  post (subst x w e2) (post e1 P (Some w)) v ⊢ post (ELet x e1 e2) P v.
 Proof.
   intros m H.
   rewrite <- fill_let.
-  eapply wp_ctx.
+  eapply post_ctx.
   simpl fill.
   intros mf Hdisj.
-  destruct (H mf) as (m' & H' & Hdisj' & Hsteps); auto.
-  exists m'.
+  destruct (H mf) as (m' & e' & H' & Hdisj' & Hsteps & Hval); auto.
+  exists m', e'.
+  split; eauto.
   split; eauto.
   split; eauto.
   eapply steps_mono.
@@ -648,177 +649,92 @@ Proof.
   - auto.
 Qed.
 
-Lemma ewp_let x w e1 e2 P :
-  ewp (subst x w e2) (wp e1 P w) ⊢ ewp (ELet x e1 e2) P.
-Proof.
-  intros m H.
-  rewrite <- fill_let.
-  eapply ewp_ctx.
-  simpl fill.
-  intros mf Hdisj.
-  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H & Hsteps & Herror).
-  exists m', e'.
-  split; auto.
-  split; eauto.
-  split.
-  - eapply steps_mono.
-    apply steps_let_val'.
-    apply steps_refl.
-    assumption.
-  - assumption.
-Qed.
-
 Lemma wp_seq e1 e2 P w v:
-  wp e2 (wp e1 P w) v ⊢ wp (ESeq e1 e2) P v.
+  post e2 (post e1 P (Some w)) v ⊢ post (ESeq e1 e2) P v.
 Proof.
   intros m H.
   rewrite <- fill_seq.
-  eapply wp_ctx.
+  eapply post_ctx.
   simpl fill.
   intros mf Hdisj.
-  destruct (H mf) as (m' & H' & Hdisj' & Hsteps); auto.
-  exists m'.
+  destruct (H mf) as (m' &e' & H' & Hdisj' & Hsteps & Hval); auto.
+  exists m', e'.
+  split; eauto.
   split; eauto.
   split; eauto.
   eapply steps_mono.
   - apply steps_seq_val.
     apply steps_refl.
-  - assumption.
+  - auto.
 Qed.
 
-Lemma ewp_seq e1 e2 P:
-  ewp e1 P ⊢ ewp (ESeq e1 e2) P.
-Proof.
-  intros m H.
-  rewrite <- fill_seq.
-  apply ewp_ctx'.
-  assumption.
-Qed.
-
-Lemma ewp_seq' e1 e2 P w:
-  ewp e2 (wp e1 P w) ⊢ ewp (ESeq e1 e2) P.
-Proof.
-  intros m H.
-  rewrite <- fill_seq.
-  eapply ewp_ctx.
-  simpl fill.
-  intros mf Hdisj.
-  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H & Hsteps & Herror).
-  exists m', e'.
-  split; auto.
-  split; eauto.
-  split; eauto using steps_seq_val.
-Qed.
-
-Lemma wp_if_true t e1 e2 P v:
-  wp e1 (wp t P (VBool true)) v ⊢ wp (EIf t e1 e2) P v.
+Lemma post_if_true t e1 e2 P v:
+  post e1 (post t P (Some (VBool true))) v ⊢ post (EIf t e1 e2) P v.
 Proof.
   intros m H.
   rewrite <- fill_if.
-  eapply wp_ctx.
+  eapply post_ctx.
   simpl fill.
   intros mf Hdisj.
-  destruct (H mf) as (m' & H' & Hdisj' & Hsteps); auto.
-  exists m'.
+  specialize (H mf) as (m' & e' & H' & Hdisj' & Hsteps & H); auto.
+  exists m', e'.
+  split; eauto.
   split; eauto.
   split; eauto.
   eapply steps_mono; auto using steps_if_true.
 Qed.
 
-Lemma ewp_if_true t e1 e2 P:
-  ewp e1 (wp t P (VBool true)) ⊢ ewp (EIf t e1 e2) P.
+Lemma post_if_false t e1 e2 P v:
+  post e2 (post t P (Some (VBool false))) v ⊢ post (EIf t e1 e2) P v.
 Proof.
   intros m H.
   rewrite <- fill_if.
-  eapply ewp_ctx.
+  eapply post_ctx.
   simpl fill.
   intros mf Hdisj.
-  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H & Hsteps & Herror).
+  specialize (H mf) as (m' & e' & H' & Hdisj' & Hsteps & H); auto.
   exists m', e'.
   split; eauto.
-  split; eauto.
-  split; auto.
-  eauto using steps_mono, steps_if_true.
-Qed.
-
-Lemma wp_if_false t e1 e2 P v:
-  wp e2 (wp t P (VBool false)) v ⊢ wp (EIf t e1 e2) P v.
-Proof.
-  intros m H.
-  rewrite <- fill_if.
-  eapply wp_ctx.
-  simpl fill.
-  intros mf Hdisj.
-  destruct (H mf) as (m' & H' & Hdisj' & Hsteps); auto.
-  exists m'.
   split; eauto.
   split; eauto.
   eapply steps_mono; auto using steps_if_false.
 Qed.
 
-Lemma ewp_if_false t e1 e2 P:
-  ewp e2 (wp t P (VBool false)) ⊢ ewp (EIf t e1 e2) P.
-Proof.
-  intros m H.
-  rewrite <- fill_if.
-  eapply ewp_ctx.
-  simpl fill.
-  intros mf Hdisj.
-  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H & Hsteps & Herror).
-  exists m', e'.
-  split; eauto.
-  split; eauto.
-  split; auto.
-  eauto using steps_mono, steps_if_false.
-Qed.
-
 Lemma wp_while t e P v:
-  wp (EIf t (ESeq e (EWhile t e)) (EVal VUnit)) P v ⊢ wp (EWhile t e) P v.
+  post (EIf t (ESeq e (EWhile t e)) (EVal VUnit)) P v ⊢ post (EWhile t e) P v.
 Proof.
   iUnfold.
   intros m H.
   intros mf Hdisj.
-  specialize (H mf Hdisj) as (m' & Hdisj' & H' & Hsteps).
-  exists m'.
-  split; auto.
-  split; auto.
+  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps & H).
+  exists m', e'.
+  split; eauto.
+  split; eauto.
+  split; eauto.
   eapply steps_step.
   - rewrite <- (fill_empty_context (EWhile t e)).
     do 2 constructor.
   - auto using fill_empty_context.
 Qed.
 
-Lemma ewp_while t e P:
-  ewp (EIf t (ESeq e (EWhile t e)) (EVal VUnit)) P ⊢ ewp (EWhile t e) P.
-Proof.
-  intros m H.
-  intros mf Hdisj.
-  specialize (H mf Hdisj) as (m' & t' & Hdisj' & H' & Hsteps & Herror).
-  exists m', t'.
-  split; auto.
-  split; auto.
-  split; auto.
-  eapply steps_step.
-  - rewrite <- (fill_empty_context (EWhile t e)).
-    do 2 constructor.
-  - auto using fill_empty_context.
-Qed.
 
 (* as the binary operations we have are all pure we don't care about the state of the heap
    but only when we sum values instead of expression *)
-Lemma wp_op op v1 v2 v P:
+Lemma post_op op v1 v2 v P:
   eval_bin_op op v1 v2 = Some v →
-  P ⊢ wp (EOp op (EVal v1) (EVal v2)) P v.
+  P ⊢ post (EOp op (EVal v1) (EVal v2)) P (Some v).
 Proof.
   intros Hop m HP mf Hdisj.
-  exists m.
-  split; auto.
-  split; auto.
+  exists m, (EVal v).
+  split; eauto.
+  split; eauto.
+  split; eauto.
   eauto using steps_single, head_step.
+  simpl; auto.
 Qed.
 
-Lemma ewp_error P :
-  P ⊢ ewp EError P.
+Lemma post_error P :
+  P ⊢ post EError P None.
 Proof.
   iUnfold.
   intros m Hp mf Hdisj.
@@ -828,10 +744,7 @@ Proof.
   split; auto using steps_refl.
   split; auto.
   intros e' m' H.
-  inversion H.
-  destruct E; simpl in *; discriminate || auto.
-  - subst. inversion H1.
-  - destruct c; simpl in *; discriminate || auto.
+  apply <- step_error. eassumption.
 Qed.
 
 
