@@ -283,19 +283,15 @@ Proof.
     + destruct c; simpl in *; discriminate.
 Qed.
 
+
+
 (* later on we can define is_error as an expression that does not step anymore
    and to actually get to prove errors about resources we need some lemmas
    to discharge this to assumptions on the heaps *)
 Lemma step_alloc v l m:
-      m !! l = None ↔ step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[l:=v]> m).
+  step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[l:=v]> m) ↔ m !! l = None.
 Proof.
   split.
-  - intro.
-    change (EAlloc (EVal v)) with (fill []  (EAlloc (EVal v))).
-    change (EVal (VLoc l)) with (fill [] (EVal (VLoc l))).
-    econstructor.
-    constructor.
-    assumption.
   - intro.
     inversion H.
     destruct E.
@@ -304,6 +300,12 @@ Proof.
       assumption.
     + simpl in *.
       destruct c; simpl in *; discriminate.
+  - intro.
+    change (EAlloc (EVal v)) with (fill []  (EAlloc (EVal v))).
+    change (EVal (VLoc l)) with (fill [] (EVal (VLoc l))).
+    econstructor.
+    constructor.
+    assumption.
 Qed.
 
 Lemma step_alloc_inv e v m m':
@@ -329,15 +331,9 @@ Proof.
 Qed.
 
 Lemma step_free l m:
-  m !! l ≠ None ↔ step (EFree (EVal (VLoc l))) m (EVal VUnit) (delete l m).
+ step (EFree (EVal (VLoc l))) m (EVal VUnit) (delete l m) ↔   m !! l ≠ None.
 Proof.
   split.
-  - intro.
-    change (EFree (EVal (VLoc l))) with (fill [] (EFree (EVal (VLoc l)))).
-    change (EVal VUnit) with (fill [] (EVal VUnit)).
-    econstructor.
-    constructor.
-    assumption.
   - intro.
     inversion H.
     destruct E.
@@ -346,6 +342,12 @@ Proof.
       assumption.
     + simpl in *.
       destruct c; simpl in *; discriminate.
+  - intro.
+    change (EFree (EVal (VLoc l))) with (fill [] (EFree (EVal (VLoc l)))).
+    change (EVal VUnit) with (fill [] (EVal VUnit)).
+    econstructor.
+    constructor.
+    assumption.
 Qed.
 
 Lemma step_free_inv e l m m':
@@ -369,15 +371,9 @@ Proof.
 Qed.
 
 Lemma step_load l v m:
-  m !! l = Some(v) ↔ step (ELoad (EVal (VLoc l))) m (EVal v) m.
+  step (ELoad (EVal (VLoc l))) m (EVal v) m ↔  m !! l = Some(v).
 Proof.
   split.
-  - intro.
-    change (ELoad (EVal (VLoc l))) with (fill [] (ELoad (EVal (VLoc l)))).
-    change (EVal v) with (fill [] (EVal v)).
-    econstructor.
-    constructor.
-    assumption.
   - intro.
     inversion H.
     destruct E.
@@ -386,6 +382,13 @@ Proof.
       assumption.
     + simpl in *.
       destruct c; simpl in *; discriminate.
+  - intro.
+    change (ELoad (EVal (VLoc l))) with (fill [] (ELoad (EVal (VLoc l)))).
+    change (EVal v) with (fill [] (EVal v)).
+    econstructor.
+    constructor.
+    assumption.
+
 Qed.
 
 Lemma step_load_inv e l m m':
@@ -407,15 +410,9 @@ Proof.
 Qed.
 
 Lemma step_store l v m:
-  m !! l ≠ None ↔ step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[l:=v]> m).
+  step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[l:=v]> m) ↔ m !! l ≠ None.
 Proof.
   split.
-  - intro.
-    change (EStore (EVal (VLoc l)) (EVal v)) with (fill [] (EStore (EVal (VLoc l)) (EVal v))).
-    change (EVal VUnit) with (fill [] (EVal VUnit)).
-    econstructor.
-    econstructor.
-    assumption.
   - intro.
     inversion H.
     destruct E.
@@ -424,6 +421,12 @@ Proof.
       assumption.
     + simpl in *.
       destruct c; simpl in *; discriminate || auto.
+  - intro.
+    change (EStore (EVal (VLoc l)) (EVal v)) with (fill [] (EStore (EVal (VLoc l)) (EVal v))).
+    change (EVal VUnit) with (fill [] (EVal VUnit)).
+    econstructor.
+    econstructor.
+    assumption.
 Qed.
 
 Lemma step_store_inv l v e m m':
