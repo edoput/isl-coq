@@ -118,9 +118,9 @@ Proof.
   split; [auto|].
   intros ???H.
   erewrite step_free_inv in H.
-  destruct H as (_ & lookup & _).
+  destruct H as (v & _ & lookup & _).
   rewrite lookup_empty in lookup.
-  auto.
+  discriminate.
 Qed.
 
 (* Now that we have found what it means for an expression to be an error
@@ -151,7 +151,7 @@ Proof.
   apply (Amb_headstep m (if b then 0 else 1)).
   rewrite fill_op_l.
   apply steps_single.
-  destruct b; auto using head_step.
+  destruct b; eauto using head_step.
 Qed.
 
 (* now this example may error if the test evaluates to true *)
@@ -230,7 +230,7 @@ Proof.
   unfold will_error, client.
   exists empty.
   (* {[ 0 := (VNat 0) ]} ∪ {[ 1 := (VLoc 0) ]} ∪ {[ 2 := (VNat 42) ]}. *)
-  exists ({[ 1 := (VLoc 2) ]} ∪ {[ 2 := (VNat 42) ]}).
+  exists ({[ 0 := Reserved ]} ∪ {[ 1 := (Value (VLoc 2)) ]} ∪ {[ 2 := (Value (VNat 42)) ]}).
   exists (EStore (EVal (VLoc 0)) (EVal (VNat 88))).
   split; [done |].
   split.
@@ -238,14 +238,22 @@ Proof.
     eapply steps_let_val'.
     + apply steps_single.
       apply (Alloc_headstep ∅ (VNat 0) 0).
-      auto using lookup_nil.
+      unfold valid_alloc.
+      intros e H.
+      exfalso.
+      eapply lookup_empty_is_Some.
+      eexists e.
+      eauto.
     + rewrite insert_empty.
       simpl subst.
       eapply steps_mono.
       eapply steps_let_val'.
       * apply steps_single.
-        apply (Alloc_headstep {[0:= (VNat 0)]} (VLoc 0) 1).
-        eapply lookup_insert_None; eauto using lookup_nil.
+        apply (Alloc_headstep {[0:= (Value (VNat 0))]} (VLoc 0) 1).
+        unfold valid_alloc.
+        rewrite lookup_singleton_ne.
+        discriminate.
+        auto.
       * simpl subst.
         rewrite insert_union_singleton_l.
         eapply steps_mono.
@@ -259,41 +267,71 @@ Proof.
            ++ eapply steps_mono.
               eapply steps_let_val'.
               ** apply steps_single.
-                 apply (Amb_headstep ({[1 := VLoc 0]} ∪ {[0 := VNat 0]}) 1).
+                 apply (Amb_headstep ({[1 := (Value (VLoc 0))]} ∪ {[0 := (Value (VNat 0))]}) 1).
               ** simpl subst.
                  eapply steps_mono.
                  apply steps_if_false'.
-                 --- auto using steps_single, head_step.
+                 --- eauto using steps_single, head_step.
                  --- eapply steps_mono. apply steps_let_val'.
-                     +++ auto using steps_single, head_step.
+                     +++ eauto using steps_single, head_step.
                      +++ simpl subst.
                          eapply steps_seq_val'.
-                         *** auto using steps_single, head_step.
+                         *** eauto using steps_single, head_step.
                          *** eapply steps_mono.
                              ---- apply steps_let_val'.
                                   apply steps_single.
-                                  rewrite delete_union.
-                                  rewrite delete_singleton.
-                                  rewrite delete_singleton_ne; auto.
-                                  rewrite map_union_empty.
-                                  auto using (Alloc_headstep {[1 := VLoc 0]} (VNat 42) 2), lookup_singleton_ne.
+                                  rewrite insert_union_r.
+                                  rewrite insert_singleton.
+                                  apply (Alloc_headstep ({[1 := Value (VLoc 0)]} ∪ {[0 := Reserved]}) (VNat 42) 2).
+                                  unfold valid_alloc.
+                                  intros.
+                                  erewrite lookup_union_Some in H.
+                                  destruct H as [H | H]; rewrite lookup_singleton_ne in H; discriminate.
+                                  solve_map_disjoint.
+                                  auto using lookup_singleton_ne.
                              ---- simpl subst.
                                   apply steps_single.
-                                  auto using head_step.
+                                  eauto using head_step.
            ++ rewrite insert_commute; eauto.
-              rewrite insert_singleton.
+              rewrite insert_union_l.
               rewrite insert_union_singleton_r.
-              2: { rewrite lookup_singleton_ne; eauto. }
-              eapply steps_refl.
+              rewrite insert_singleton.
+              assert (
+                  ({[1 := Value (VLoc 2)]} ∪ {[0 := Reserved]} : mem)
+                  =
+                  ({[0 := Reserved]} ∪ {[1 := Value (VLoc 2)]})
+              ).
+              { admit. }
+              assert (
+                  ({[1 := Value (VLoc 2)]} ∪ {[0 := Reserved]} ∪ {[2 := Value (VNat 42)]}: mem)
+                  =
+                  ({[0 := Reserved]} ∪ {[1 := Value (VLoc 2)]} ∪ {[2 := Value (VNat 42)]})
+              ).
+              { admit. }
+              rewrite H0.
+              apply steps_refl.              
+              rewrite lookup_union_None.
+              split; simpl_map; reflexivity.
   - unfold is_error.
     split.
     + auto.
     + intros.
       intro.
-      erewrite step_store_inv in H. destruct H as (lookup_h & _ & _).
-      apply lookup_h.
-      apply lookup_union_None; auto using lookup_singleton_ne.
-Qed.
+      erewrite step_store_inv in H. destruct H as (w & lookup_h & _ & _).
+      do 2 erewrite lookup_union_Some in lookup_h.
+      destruct lookup_h as [ [a|b] | c].
+      * rewrite lookup_singleton in a.
+        discriminate.
+      * rewrite lookup_singleton_ne in b.
+        discriminate.
+        auto.
+      * rewrite lookup_singleton_ne in c.
+        discriminate.
+        auto.
+      * solve_map_disjoint.
+      * solve_map_disjoint.
+      * solve_map_disjoint.
+Admitted.
 
 Definition iProp := mem → Prop.
 
@@ -308,8 +346,9 @@ Definition post (e : expr) (P : iProp) (v : option val) : iProp :=
 
 
 Definition iEmp : iProp := λ m, m = ∅.
-Definition iPoints (l : nat) (v : val) : iProp := λ m, m = {[ l := v ]}.
-Definition iNegPoints (l : nat) : iProp := λ m, m !! l = None.
+Definition iPoints (l : nat) (v : val) : iProp := λ m, m = {[ l := (Value v) ]}.
+Definition iUnallocated (l : nat) : iProp := λ m, m !! l = None.
+Definition iNegPoints (l : nat) : iProp := λ m, m = {[ l := Reserved ]}.
 Definition iSep (P Q : iProp) : iProp := λ m, ∃ m1 m2, P m1 ∧ Q m2 ∧ m = m1 ∪ m2 ∧ m1 ##ₘ m2 .
 Definition iWand (P Q : iProp) : iProp := λ m, ∀ m', m ##ₘ m' → P m' → Q (m' ∪ m).
 Definition iAnd (P Q : iProp) : iProp := λ m, P m ∧ Q m.
@@ -336,7 +375,7 @@ Notation "'Ex' x1 .. xn , P" :=
   (at level 200, x1 binder, xn binder, right associativity).
 
 
-Ltac iUnfold := unfold iEmp, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails, iAnd, iOr.
+Ltac iUnfold := unfold iEmp, iNegPoints, iUnallocated, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails, iAnd, iOr.
 Ltac duh := iUnfold;
   naive_solver (
     rewrite ?map_union_assoc ?left_id ?right_id;
