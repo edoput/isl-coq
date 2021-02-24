@@ -761,29 +761,33 @@ Proof.
 Qed.
 
 Lemma post_alloc l v:
-  l ↦ v ⊢ post (EAlloc (EVal v)) (iNegPoints l) (Some (VLoc l)).
+  l ↦ v ⊢ post (EAlloc (EVal v)) (iUnallocated l) (Some (VLoc l)).
 Proof.
   intros m H mf Hdisj.
-  exists ∅, (EVal (VLoc l)).
+  exists (delete l m), (EVal (VLoc l)).
+  iUnfold.
   split.
   solve_map_disjoint.
+  simpl_map.
+  split. reflexivity.
   split.
-  apply lookup_empty.
-  split.
-  unfold iPoints in H.
-  subst.
-  eapply steps_step.
-  - apply step_alloc_inv.
-    exists l.
-    split.
-    eauto.
-    split.
-    admit.
-    eauto.
-  - rewrite insert_union_l.
-    rewrite insert_empty.
-    apply steps_refl.
-  - simpl; auto.
+  - eapply steps_step.
+    2:{ apply steps_refl. }.
+    unfold iPoints in H.
+    subst m.
+    rewrite delete_singleton.
+    rewrite <- insert_union_singleton_l.
+    assert (∅ ∪ mf = mf). { admit. }
+    rewrite <- H at 2.
+    apply step_alloc.
+    unfold valid_alloc.
+    intros e H0.
+    assert ( mf !! l = None). { eapply map_disjoint_Some_l. eassumption. apply lookup_singleton. }.
+    rewrite H in H0.
+    rewrite H1 in H0.
+    discriminate.
+  - simpl.
+    reflexivity.
 Admitted.
 
 Lemma post_free l v:
