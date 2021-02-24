@@ -835,29 +835,34 @@ Proof.
 Qed.
 
 Lemma post_free l v:
-  iNegPoints l ⊢ post (EFree (EVal (VLoc l))) (l ↦ v) (Some VUnit).
+  l ↦ ⊥ ⊢ post (EFree (EVal (VLoc l))) (l ↦ v) (Some VUnit).
 Proof.
   intros m H mf Hdisj.
-  exists (<[ l := v ]> m), (EVal VUnit).
+  exists (<[ l := (Value v) ]> m), (EVal VUnit).
   split.
-  - unfold iNegPoints in H. admit.
+  - unfold iNegPoints in H.
+    subst m.
+    solve_map_disjoint.
   - split.
-    + admit.
+    + iUnfold.
+      unfold iNegPoints in H.
+      subst m.
+      apply insert_singleton.
     + split.
       eapply steps_step.
-      * eapply step_free.
-        intro.
-        rewrite <- insert_union_l in H0.
-        erewrite lookup_insert in H0.
-        discriminate.
-      * rewrite <- insert_union_l.
-        rewrite delete_insert.
-        apply steps_refl.
-        apply lookup_union_None.
-        split; auto.
-        admit.
+      2: { apply steps_refl. }.
+      * unfold iNegPoints in H.
+        subst m.
+        rewrite insert_singleton.
+        rewrite <- (insert_singleton l (Value v) Reserved).
+        rewrite <- insert_union_l.
+        eapply step_free.
+        exists v.
+        erewrite lookup_union_Some_l.
+        eauto.
+        apply lookup_insert.
       * simpl; auto.
-Admitted.
+Qed.
 
 Lemma post_free_err l:
   iNegPoints l  ⊢ post (EFree (EVal (VLoc l))) (iNegPoints l) None.
