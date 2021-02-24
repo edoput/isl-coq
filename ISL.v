@@ -364,6 +364,7 @@ Notation "P ∗ Q" := (iSep P Q) (at level 80, right associativity).
 Notation "P ∧ Q" := (iAnd P Q) (at level 80, right associativity).
 Notation "P ∨ Q" := (iOr P Q) (at level 85, right associativity).
 Notation "l ↦ v" := (iPoints l v) (at level 20).
+Notation "l ↦ ⊥" := (iNegPoints l) (at level 20).
 Notation "'emp'" := iEmp.
 Notation "P -∗ Q" := (iWand P Q) (at level 99, Q at level 200, right associativity).
 Notation "⌜ p ⌝" := (iPure p) (at level 1, p at level 200).
@@ -760,16 +761,15 @@ Proof.
   apply <- step_error. eassumption.
 Qed.
 
+
 Lemma post_alloc l v:
-  l ↦ v ⊢ post (EAlloc (EVal v)) (iUnallocated l) (Some (VLoc l)).
+  l ↦ v ⊢ post (EAlloc (EVal v)) (λ m, m !! l = None) (Some (VLoc l)).
 Proof.
   intros m H mf Hdisj.
   exists (delete l m), (EVal (VLoc l)).
-  iUnfold.
   split.
   solve_map_disjoint.
-  simpl_map.
-  split. reflexivity.
+  simpl_map. split. auto.
   split.
   - eapply steps_step.
     2:{ apply steps_refl. }.
@@ -777,15 +777,15 @@ Proof.
     subst m.
     rewrite delete_singleton.
     rewrite <- insert_union_singleton_l.
-    assert (∅ ∪ mf = mf). { admit. }
-    rewrite <- H at 2.
+    rewrite left_id_L.
     apply step_alloc.
     unfold valid_alloc.
     intros e H0.
-    assert ( mf !! l = None). { eapply map_disjoint_Some_l. eassumption. apply lookup_singleton. }.
-    rewrite H in H0.
-    rewrite H1 in H0.
-    discriminate.
+    exfalso.
+    eapply map_disjoint_spec.
+    eassumption.
+    apply lookup_singleton.
+    eassumption.
   - simpl.
     reflexivity.
 Admitted.
