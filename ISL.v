@@ -788,7 +788,51 @@ Proof.
     eassumption.
   - simpl.
     reflexivity.
-Admitted.
+Qed.
+
+Lemma post_alloc' l v:
+  l ↦ v ⊢ post (EAlloc (EVal v)) (l ↦ ⊥) (Some (VLoc l)).
+Proof.
+  intros m H mf Hdisj.
+  exists {[ l := Reserved ]}, (EVal (VLoc l)).
+  split.
+  - (* l is not in mf so we are ok but we have to go through the disjoint definition *)
+    apply map_disjoint_spec.
+    intros.
+    destruct (Nat.eq_dec l i) as [Heq|Hneq].
+    + subst i.
+      eapply map_disjoint_spec.
+      eassumption.
+      unfold iPoints in H; subst.
+      apply lookup_singleton.
+      eassumption.
+    + rewrite lookup_singleton_ne in H0.
+      discriminate.
+      assumption.
+  - split.
+    iUnfold. reflexivity.
+    split.
+    + unfold iPoints in H.
+      subst m.
+      rewrite <- (insert_singleton l Reserved (Value v)).
+      eapply steps_step. 2: { apply steps_refl. }.
+      rewrite <- (insert_union_l {[l:=Reserved]} mf l (Value v)).
+      apply step_alloc.
+      unfold valid_alloc.
+      intros.
+      erewrite lookup_union_Some in H.
+      destruct H as [H|H].
+      * rewrite lookup_singleton in H.
+        inversion H. reflexivity.
+      * exfalso.
+        eapply map_disjoint_spec.
+        eassumption.
+        apply lookup_singleton.
+        eassumption.
+      * solve_map_disjoint.
+    + simpl.
+      reflexivity.
+Qed.
 
 Lemma post_free l v:
   iNegPoints l ⊢ post (EFree (EVal (VLoc l))) (l ↦ v) (Some VUnit).
