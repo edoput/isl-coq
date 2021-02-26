@@ -743,6 +743,28 @@ Lemma post_store_err l v:
 Proof.
 Admitted.
 
+Definition pure_step (e e' : expr) := ∀ h,  step e h e' h.
+               
+Lemma post_pure_step e e' P v :
+  pure_step e e' → post e' P v ⊢ post e P v.
+Proof.
+  intros pure m H mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e'' &  Hdisj' & HP & Hsteps & H).
+  exists m', e''.
+  split; auto.
+  split; auto.
+  split.
+  - unfold pure_step in pure.
+    eapply steps_step.
+    apply (pure (m ∪ mf)).
+    assumption.
+  - assumption.
+Qed.
+
+Lemma post_let_step s e2 v x P:
+  post (subst s v e2) P x ⊢ post (ELet s (EVal v) e2) P x.
+Proof.
+Admitted.
 (*
 
 Question: which of these do we want?
