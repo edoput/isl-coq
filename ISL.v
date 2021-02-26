@@ -456,16 +456,32 @@ Proof.
   simpl. eauto 8 using steps_context, is_error_fill.
 Qed.
 
-Lemma post_let x v w e1 e2 P :
-  post (subst x w e2) (post e1 P (Some w)) v ⊢ post (ELet x e1 e2) P v.
+
+Definition pure_step (e e' : expr) := ∀ h,  step e h e' h.
+
+Lemma post_pure_step e e' P v :
+  pure_step e e' → post e' P v ⊢ post e P v.
 Proof.
-  intros m H.
-  rewrite <- fill_let.
-  eapply post_ctx.
-  simpl fill.
-  intros mf Hdisj.
-  destruct (H mf) as (m' & e' & H' & Hdisj' & Hsteps & Hval); auto.
-  eauto 8 with astep.
+  intros pure m H mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e'' &  Hdisj' & HP & Hsteps & H).
+  exists m', e''.
+  split; auto.
+  split; auto.
+  split.
+  - unfold pure_step in pure.
+    eapply steps_step.
+    apply (pure (m ∪ mf)).
+    assumption.
+  - assumption.
+Qed.
+
+Lemma post_let_step s e2 v x P:
+  post (subst s v e2) P x ⊢ post (ELet s (EVal v) e2) P x.
+Proof.
+  apply post_pure_step.
+  intro m.
+  apply step_single.
+  eauto using head_step.
 Qed.
 
 Lemma post_seq e1 e2 P w v:
@@ -743,26 +759,8 @@ Lemma post_store_err l v:
 Proof.
 Admitted.
 
-Definition pure_step (e e' : expr) := ∀ h,  step e h e' h.
-               
-Lemma post_pure_step e e' P v :
-  pure_step e e' → post e' P v ⊢ post e P v.
-Proof.
-  intros pure m H mf Hdisj.
-  specialize (H mf Hdisj) as (m' & e'' &  Hdisj' & HP & Hsteps & H).
-  exists m', e''.
-  split; auto.
-  split; auto.
-  split.
-  - unfold pure_step in pure.
-    eapply steps_step.
-    apply (pure (m ∪ mf)).
-    assumption.
-  - assumption.
-Qed.
-
-Lemma post_let_step s e2 v x P:
-  post (subst s v e2) P x ⊢ post (ELet s (EVal v) e2) P x.
+Lemma post_store_after_free l v:
+  (iNegPoints l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iNegPoints l) None.
 Proof.
 Admitted.
 (*
