@@ -693,17 +693,7 @@ Qed.
 Lemma post_store_err l v:
   (iUnallocated l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iUnallocated l) None.
 Proof.
-  intros m H mf Hdisj.
-  eexists _,_.
-  split_and!; eauto with astep. simpl.
-  split; auto. iUnfold. subst.
-  intros e  m' Hstep.
-  apply step_store_inv in Hstep as ( ? & ( ? & Hm & ?)). subst.
-  apply lookup_union_Some in H as []; auto.
-  + rewrite lookup_singleton in H. asimpl.
-  + specialize (Hdisj l). rewrite H in Hdisj.
-    rewrite lookup_singleton in Hdisj. by asimpl.
-Qed.
+Admitted.
 
 Lemma post_store_after_free l v:
   (l ↦ ⊥) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (l ↦ ⊥) None.
