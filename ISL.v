@@ -625,7 +625,12 @@ Proof.
 Qed.
 
 Lemma post_free_err l:
-  iNegPoints l ⊢ post (EFree (EVal (VLoc l))) (iNegPoints l) None.
+  iUnallocated l ⊢ post (EFree (EVal (VLoc l))) (iUnallocated l) None.
+Proof.
+Admitted.
+
+Lemma post_double_free l:
+  iNegPoints l  ⊢ post (EFree (EVal (VLoc l))) (l ↦ ⊥) None.
 Proof.
   intros m H mf Hdisj.
   exists m, (EFree (EVal (VLoc l))).
@@ -638,9 +643,21 @@ Proof.
   split; auto.
   intros e' m' Hstep.
   erewrite step_free_inv in Hstep.
-  destruct Hstep as (_ & Hlookup & _).
-Admitted.
-
+  destruct Hstep as (v & Hval & Hlookup & Hinsert).
+  erewrite lookup_union_Some in Hlookup.
+  destruct Hlookup as [Hlookup_m | Hlookup_mf].
+  - unfold iNegPoints in H.
+    rewrite H in Hlookup_m.
+    simpl_map.
+    discriminate.
+  - eapply map_disjoint_spec.
+    eassumption.
+    unfold iNegPoints in H. subst m.
+    eapply lookup_singleton.
+    eassumption.
+  - assumption.
+Qed.
+    
 Lemma post_load l v:
   l ↦ v ⊢ post (ELoad (EVal (VLoc l))) (l ↦ v) (Some v).
 Proof.
