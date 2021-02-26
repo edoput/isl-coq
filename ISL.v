@@ -699,20 +699,14 @@ Lemma post_store_after_free l v:
   (l ↦ ⊥) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (l ↦ ⊥) None.
 Proof.
   intros m H mf Hdisj.
-  exists m, (EStore (EVal (VLoc l)) (EVal v)).
+  eexists _,_; split_and!; eauto with astep. simpl. iUnfold.
   split; auto.
-  split; auto.
-  split.
-  - apply steps_refl.
-  - simpl.
-    unfold is_error.
-    split; auto.
-    intros e' m' Hstep.
-    erewrite step_store_inv in Hstep.
-    destruct Hstep as (w & lookup_some & unit & final_heap).
-    erewrite lookup_union_Some_l in lookup_some.
-    2: { unfold iNegPoints in H. subst m. apply lookup_singleton. }
-    discriminate.
+  intros e' m' Hstep.
+  erewrite step_store_inv in Hstep.
+  destruct Hstep as (w & lookup_some & unit & final_heap).
+  erewrite lookup_union_Some_l in lookup_some.
+  2: { unfold iNegPoints in H. subst m. apply lookup_singleton. }
+  discriminate.
 Qed.
 
 (* this is about evaluation of pure expressions *)
