@@ -671,7 +671,7 @@ Proof.
     apply lookup_union_Some_l.
     unfold iPoints in H.
     subst.
-    eassumption.
+    apply lookup_singleton.
   - apply steps_refl.
   - simpl; reflexivity.
 Qed.
@@ -699,8 +699,12 @@ Proof.
     unfold iNegPoints in H.
     rewrite * lookup_union_Some in Hm by assumption.
     destruct Hm as [Hlookup_m | Hlookup_mf].
-    + rewrite H in Hlookup_m. admit.
-    + admit.
+    + rewrite H in Hlookup_m.
+      discriminate.
+    + assert (mf !! l = None).
+      eauto using iNegPoints_own.
+      admit.
+      rewrite H0 in Hlookup_mf. discriminate.
 Admitted.
 
 Lemma post_store l v v':
