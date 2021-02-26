@@ -1,74 +1,35 @@
-From stdpp Require Export gmap.
+From iris.proofmode Require Import tactics.
+Ltac asimpl := simpl in *; simplify_eq.
+Ltac inv H := inversion H; clear H; asimpl.
 
 (* A little expression language with naturals, booleans and heap
    locations for primitive values along with a small step semantic
    to reason about heap primitives. *)
 
-Require Export Arith String List Omega.
-Export ListNotations.
-
 Inductive val : Type :=
-| VUnit : val
-| VBool : bool → val
-| VNat : nat → val
-| VLoc : nat → val.
+  | VUnit : val
+  | VBool : bool → val
+  | VNat : nat → val
+  | VLoc : nat → val.
 
 Inductive bin_op : Type :=
   | PlusOp | MinusOp | LeOp | LtOp | EqOp.
 
 Inductive expr : Type :=
-| EVar : string → expr
-| EVal : val → expr
-| ELet : string → expr → expr → expr
-| ESeq : expr → expr → expr
-| EOp : bin_op → expr → expr → expr
-| EIf : expr → expr → expr → expr
-| EWhile: expr → expr → expr
-| EAlloc : expr → expr
-| EFree : expr → expr
-| ELoad : expr → expr
-| EStore : expr → expr → expr
-(* new *)
-| EAmb : expr
-| EError : expr.
+  | EVar : string → expr
+  | EVal : val → expr
+  | ELet : string → expr → expr → expr
+  | ESeq : expr → expr → expr
+  | EOp : bin_op → expr → expr → expr
+  | EIf : expr → expr → expr → expr
+  | EWhile: expr → expr → expr
+  | EAlloc : expr → expr
+  | EFree : expr → expr
+  | ELoad : expr → expr
+  | EStore : expr → expr → expr
+  | EAmb : expr
+  | EError : expr.
 
-(* in this example v is a (EVal (VLoc n))
-   describing in the location in the heap where
-   we will find a second location. In C parlance
-   this would be a
-   v ** int so a pointer to a vector of integers.
-
-   In our case the underlying vector is just one cell
-   so we can free and allocate just one to simulate
-   a use after free bug later on.
- *)
-
-Definition push_back : expr → expr :=
-  fun v =>
-    (ELet "z" EAmb
-          (EIf (EOp EqOp (EVar "z") (EVal (VNat 0)))
-               (EVal VUnit)
-               (ELet "y" (ELoad v) (* now y points to the underlying array *)
-                     (ESeq (EFree (EVar "y"))
-                           (ELet "y" (EAlloc (EVal (VNat 42)))
-                                 (EStore v (EVar "y"))))))).
-
-Example example_push_back := push_back (EVal (VLoc 0)).
-Check example_push_back.
-Print example_push_back.
-Compute example_push_back.
-
-(* client is where we will trigger the use-after-free
-   error as we get a hold of a location that might be
-   deallocated
- *)
-Definition client : expr :=
-    (ELet "w" (EAlloc (EVal (VNat 0)))
-          (ELet "v" (EAlloc (EVar "w"))
-
-    (ELet "x" (ELoad (EVar "v"))
-          (ESeq (push_back (EVar "v")) (* here the underlying storage for v might be moved *)
-                (EStore (EVar "x") (EVal (VNat 88))))))). (* so using the previous location might fault *)
 
 (* now that the syntax is defined and I have written
    down the examples from the paper the semantics of this
@@ -114,24 +75,20 @@ Fixpoint subst (x : string) (w : val) (e : expr) : expr :=
   end.
 
 Inductive either :=
-| Value: val -> either
-| Reserved : either
-.
+  | Value: val -> either
+  | Reserved : either.
 
 Notation mem := (gmap nat either).
 
 (* a valid allocation cell is one where there is no current Value *)
-Definition valid_alloc (m : mem) (l : nat) := ∀ e, m !! l = Some e → e = Reserved.  
+Definition valid_alloc (m : mem) (l : nat) := ∀ e, m !! l = Some e → e = Reserved.
 
 Definition memfresh (m : mem) : nat := fresh (dom (gset nat) m).
 
 Lemma memfresh_is_fresh m : lookup (memfresh m) m = None.
 Proof.
-  unfold memfresh.
-  apply not_elem_of_dom.
-  apply is_fresh.
+  unfold memfresh. apply not_elem_of_dom, is_fresh.
 Qed.
-
 
 Inductive head_step : expr → mem → expr → mem → Prop :=
   | Let_headstep m y e2 v1 :
@@ -159,7 +116,6 @@ Inductive head_step : expr → mem → expr → mem → Prop :=
   | Store_headstep m l v w:
      m !! l = (Some (Value w)) →
      head_step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[ l := (Value v) ]> m)
-  (* new : the ambiguos expression reduces to any natural number *)
   | Amb_headstep m (n : nat):
      head_step EAmb m (EVal (VNat n)) m.
 
@@ -170,9 +126,9 @@ Inductive head_step : expr → mem → expr → mem → Prop :=
    EFree (EVal (VLoc l)) as it would be an error.
  *)
 
-Lemma Alloc_fresh_headstep m l v:
-      l = (memfresh m) →
-      head_step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[ l := (Value v)]> m).
+Lemma Alloc_fresh_headstep m l v :
+  l = memfresh m →
+  head_step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[ l := (Value v)]> m).
 Proof.
   intros ->.
   econstructor.
@@ -186,7 +142,7 @@ Create HintDb head_step.
 Hint Constructors head_step : head_step.
 
 
-(* The small step semantic gets in the way during longer proofs 
+(* The small step semantic gets in the way during longer proofs
    and we need to define reductions not in head position anyway. *)
 
 
@@ -254,167 +210,92 @@ Lemma context_composition e E E': fill E (fill E' e) = fill (E ++ E') e.
 Proof.
   induction E.
   - auto using app_nil_l, fill_empty_context.
-  - simpl. apply f_equal. assumption.
+  - simpl. by f_equal.
 Qed.
 
 Lemma step_context e e' m m' E :
   step e m e' m' → step (fill E e) m (fill E e') m'.
 Proof.
-  intro.
-  destruct H.
-  rewrite -> 2 context_composition.
-  constructor.
-  assumption.
+  intros [].
+  rewrite !context_composition.
+  auto using step.
 Qed.
 
 Lemma step_prefix e e' m m':
-  step e m e' m' ↔ ∃ E e1 e2, (fill E e1) = e ∧ (fill E e2) = e' ∧ step e1 m e2 m'.
+  step e m e' m' ↔ ∃ E e1 e2, fill E e1 = e ∧ fill E e2 = e' ∧ step e1 m e2 m'.
 Proof.
   split.
-  - intro.
-    inversion H.
-    exists E, e1, e2; do 2 split; auto.
-    auto using step_single.
-  - intro. (* as (E & e1 & e2 & H).*)
-    destruct H as (E & e1 & e2 & He1 & He2 & H).
-    subst.
-    auto using step_context.
+  - intro. inv H. repeat eexists; eauto using step_single.
+  - naive_solver (auto using step_context).
 Qed.
 
 Lemma step_error e m m':
-  False ↔ step (EError) m e m'.
+  ¬ step EError m e m'.
 Proof.
-  split; auto.
-  - intro. exfalso. assumption.
-  - intro.
-    inversion H.
-    destruct E; simpl in *.
-    + subst.
-      inversion H1.
-    + destruct c; simpl in *; discriminate.
+  intro. inv H. destruct E;[inv H1|destruct c;discriminate].
 Qed.
-
-
 
 (* later on we can define is_error as an expression that does not step anymore
    and to actually get to prove errors about resources we need some lemmas
    to discharge this to assumptions on the heaps *)
 
 Lemma step_alloc v l m:
-  step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[l:= (Value v)]> m) ↔ valid_alloc m l.
+  step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[l:= Value v]> m) ↔ valid_alloc m l.
 Proof.
-  split.
-  - intro.
-    inversion H.
-    destruct E.
-    + rewrite fill_empty_context in *; subst.
-      inversion H3.
-      assumption.
-    + simpl in *.
-      destruct c; simpl in *; discriminate.
-  - intro H.
-    change (EAlloc (EVal v)) with (fill []  (EAlloc (EVal v))).
-    change (EVal (VLoc l)) with (fill [] (EVal (VLoc l))).
-    econstructor.
-    econstructor.
-    assumption.
+  split; intro H.
+  - inv H.
+    destruct E; asimpl.
+    + by inv H3.
+    + destruct c; asimpl.
+  - apply step_single. by constructor.
 Qed.
 
 Lemma step_alloc_inv e v m m':
-  step (EAlloc (EVal v)) m e m' ↔ ∃ l, e = (EVal (VLoc l)) ∧ valid_alloc m l ∧ m' = <[l := (Value v)]> m.
+  step (EAlloc (EVal v)) m e m' ↔ ∃ l, e = (EVal (VLoc l)) ∧ valid_alloc m l ∧ m' = <[l := Value v]> m.
 Proof.
   split; intro.
-  - inversion H.
-    destruct E.
-    + simpl in *; subst.
-      inversion H1; exists l; do 2 split; auto; rewrite H2; intro; discriminate.
-    + destruct c; simpl in *; discriminate || auto.
-      * inversion H0; destruct E; simpl in *.
-        -- subst e1. inversion H1.
-        -- destruct c; simpl in *; discriminate.
-  - destruct H as (loc & value & precondition & final_heap).
-    subst.
-    apply step_single.
-    eauto using head_step.
+  - inv H. destruct E.
+    + inv H1. eauto.
+    + destruct c; asimpl. destruct E; asimpl; first inv H1.
+      destruct c; asimpl.
+  - destruct H as (? & -> & ? & ->).
+    eauto using step_single, head_step.
 Qed.
 
 Lemma step_free l m:
  step (EFree (EVal (VLoc l))) m (EVal VUnit) (<[l := Reserved ]> m) ↔ ∃ v, m !! l = (Some (Value v)).
 Proof.
-  split.
-  - intro.
-    inversion H.
-    destruct E.
-    + rewrite fill_empty_context in *; subst.
-      inversion H3.
-      exists v; assumption.
-    + simpl in *.
-      destruct c; simpl in *; discriminate.
-  - intro.
-    destruct H as [v H].
-    change (EFree (EVal (VLoc l))) with (fill [] (EFree (EVal (VLoc l)))).
-    change (EVal VUnit) with (fill [] (EVal VUnit)).
-    econstructor.
-    econstructor.
-    eassumption.
+  split; intro.
+  - inv H. destruct E; asimpl. inv H3. eauto. destruct c; asimpl.
+  - destruct H. eauto using step_single, head_step.
 Qed.
 
 Lemma step_free_inv e l m m':
   step (EFree (EVal (VLoc l))) m e m' ↔ ∃ v, e = (EVal VUnit) ∧ m !! l = (Some (Value v)) ∧ m' = <[ l := Reserved ]> m.
 Proof.
   split.
-  - intro.
-    inversion H.
-    destruct E; simpl in *.
-    + subst.
-      inversion H1.
-      exists v.
-      split; auto.
-    + destruct c; simpl in *; discriminate || auto.
-      * inversion H0.
-        destruct E; simpl in *; discriminate || auto.
-        subst.
-        inversion H1.
-        destruct c; simpl in *; discriminate || auto.
+  - intro. inv H. destruct E; asimpl.
+    + inv H1. eauto.
+    + destruct c; asimpl. destruct E; asimpl. inv H1. destruct c; asimpl.
   - intros [v [-> [Hlookup ->]]].
-    apply step_free; auto.
-    eauto.
+    apply step_free; eauto.
 Qed.
 
 Lemma step_load l v m:
   step (ELoad (EVal (VLoc l))) m (EVal v) m ↔  m !! l = Some (Value v).
 Proof.
-  split.
-  - intro.
-    inversion H.
-    destruct E.
-    + rewrite fill_empty_context in *; subst.
-      inversion H3.
-      assumption.
-    + simpl in *.
-      destruct c; simpl in *; discriminate.
-  - intro.
-    change (ELoad (EVal (VLoc l))) with (fill [] (ELoad (EVal (VLoc l)))).
-    change (EVal v) with (fill [] (EVal v)).
-    econstructor.
-    constructor.
-    assumption.
+  split; intro.
+  - inv H. destruct E; asimpl. by inv H3. destruct c; asimpl.
+  - eauto using step_single, head_step.
 Qed.
 
 Lemma step_load_inv e l m m':
   step (ELoad (EVal (VLoc l))) m e m' ↔ ∃ v, e = (EVal v) ∧ m !! l = (Some (Value v)) ∧ m' = m.
 Proof.
   split.
-  - intro.
-    inversion H.
-    destruct E; simpl in *; discriminate || auto; subst.
-    + inversion H1; simpl in *; discriminate || auto; subst.
-      exists v; split; auto.
-    + destruct c; simpl in *; discriminate || auto; subst.
-      * inversion H0.
-        destruct E; simpl in *; discriminate || auto; subst.
-        inversion H1.
-        destruct c; simpl in *; discriminate || auto.
+  - intro. inv H. destruct E; asimpl.
+    + inv H1. eauto.
+    + destruct c; asimpl. destruct E; asimpl. inv H1. destruct c; asimpl.
   - intros [v [-> [Hlookup ->]]].
     apply step_load; auto.
 Qed.
@@ -422,63 +303,25 @@ Qed.
 Lemma step_store l v m:
   step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[l:= (Value v)]> m) ↔ ∃ w, m !! l = Some (Value w).
 Proof.
-  split.
-  - intro.
-    inversion H.
-    destruct E.
-    + rewrite fill_empty_context in *; subst.
-      inversion H3.
-      eauto.
-    + simpl in *.
-      destruct c; simpl in *; discriminate || auto.
-  - intro.
-    destruct H as [w H].
-    change (EStore (EVal (VLoc l)) (EVal v)) with (fill [] (EStore (EVal (VLoc l)) (EVal v))).
-    change (EVal VUnit) with (fill [] (EVal VUnit)).
-    econstructor.
-    econstructor.
-    eauto.
+  split; intro.
+  - inv H. destruct E; asimpl. inv H3. eauto. destruct c; asimpl.
+  - destruct H. eauto using head_step, step_single.
 Qed.
 
 Lemma step_store_inv l v e m m':
   step (EStore (EVal (VLoc l)) (EVal v)) m e m' ↔ ∃ w, m !! l = (Some (Value w)) ∧ e = (EVal VUnit) ∧ m' = (<[l:= (Value v)]> m).
 Proof.
    split.
-  - intro.
-    inversion H.
-    destruct E; simpl in *; discriminate || auto; subst.
-    + inversion H1; simpl in *; discriminate || auto; subst.
-      exists w.
-      split; auto.
-    + destruct c; simpl in *; discriminate || auto; subst.
-      * inversion H0.
-        destruct E; simpl in *; discriminate || auto; subst.
-        inversion H1.
-        destruct c; simpl in *; discriminate || auto.
-      * inversion H0.
-        destruct E; simpl in *; discriminate || auto; subst.
-        inversion H1.
-        destruct c; simpl in *; discriminate || auto.
+  - intro. inv H.
+    + destruct E; asimpl. { inv H1. eauto. }
+      destruct c; asimpl. destruct E; asimpl. inv H1. destruct c; asimpl.
+      destruct E; asimpl. inv H1. destruct c; asimpl.
   - intros [w (Hlookup & -> & ->)].
-    apply step_store; auto.
-    eauto.
+    apply step_store; eauto.
 Qed.
-
-Create HintDb step.
-(* but for more specialized forms we can keep going *)
 
 Lemma fill_let s e1 e2 : (fill [(LetCtx s e2)] e1) = (ELet s e1 e2).
 Proof. auto. Qed.
-
-Hint Extern 10 (step (ELet _ _ _) _ (ELet _ _ _) _) => rewrite <- 2 ! fill_let; econstructor : step.
-
-(* let's try our automation *)
-Lemma foo s : step (ELet s (EOp PlusOp (EVal (VNat 1)) (EVal (VNat 1)))
-                            (EVar s)) empty
-                   (ELet s (EVal (VNat 2)) (EVar s)) empty.
-Proof.
-  debug eauto with step head_step.
-Qed.
 
 Lemma fill_if t e1 e2 : (fill [(IfCtx e1 e2)] t) = (EIf t e1 e2).
 Proof. auto. Qed.
@@ -515,17 +358,11 @@ Inductive steps : expr → mem → expr → mem → Prop :=
      steps e2 m2 e3 m3 →
      steps e1 m1 e3 m3.
 
-(* It did not make sense to have this as a constructor of _steps_ 
+(* It did not make sense to have this as a constructor of _steps_
    but having it is a _quality of life improvement_. *)
 Lemma steps_single e e' m m' : head_step e m e' m' → steps e m e' m'.
 Proof.
-  intros.
-  eapply steps_step.
-  rewrite <- (fill_empty_context e).
-  econstructor.
-  eassumption.
-  rewrite fill_empty_context.
-  apply steps_refl.
+  eauto using step_single, steps.
 Qed.
 
 (* Now there are two _kind_ of multiple steps reduction that we might
@@ -536,66 +373,64 @@ execution and the composite expression is just any intermediate step which is no
    Moreover as the only constructors for _steps_ are the _0 step_ and the _put one more step in front_ this is a quality of life improvement. *)
 
 (* composing 0+ steps still yields 0+ steps *)
-Lemma steps_mono e e' e'' h h' h'':
+Lemma steps_trans e e' e'' h h' h'':
   steps e h e' h' → steps e' h' e'' h'' → steps e h e'' h''.
 Proof.
-  intros.
-  induction H, H0; eauto using steps.
+  intros. induction H, H0; eauto using steps.
 Qed.
 
-(* But even with this _steps_mono_ lemma there are still some improvements we can have. steps mono cannot help us reducing an expression to a value in a let expression binding without applying it more than twice so here are some more lemmas about multiple steps reductions happening in your AST with a hole. *)
+(* But even with this _steps_trans_ lemma there are still some improvements we can have. steps trans cannot help us reducing an expression to a value in a let expression binding without applying it more than twice so here are some more lemmas about multiple steps reductions happening in your AST with a hole. *)
 
 (* steps *)
 
-Lemma steps_context e e' h h' E :
+Lemma steps_context E e e' h h' :
   steps e h e' h' → steps (fill E e) h (fill E e') h'.
 Proof.
-  intro.
-  induction H.
-  constructor.
-  eapply (steps_mono (fill E e1) (fill E e2) (fill E e3) m1 m2 m3).
-  - econstructor.
-    eauto using step_context.
-    apply steps_refl.
-  - assumption.
+  induction 1; eauto using steps_trans, step_context, steps.
 Qed.
+
+Inductive is_ctx : list ctx_item -> Prop :=
+  | is_LetCtx s e : is_ctx [LetCtx s e]
+  | is_IfCtx e1 e2 : is_ctx [IfCtx e1 e2]
+  | is_SeqCtx e : is_ctx [SeqCtx e]
+  | is_OpCtxL e1 e2 : is_ctx [OpCtxL e1 e2]
+  | is_AllocCtx : is_ctx [AllocCtx]
+  | is_FreeCtx : is_ctx [FreeCtx]
+  | is_LoadCtx : is_ctx [LoadCtx]
+  | is_StoreCtxL e : is_ctx [StoreCtxL e]
+  | is_StoreCtxR e : is_ctx [StoreCtxR e].
+
+Lemma steps_contexta E e e' h h' e1 e2 :
+  is_ctx E -> e1 = fill E e -> e2 = fill E e' -> steps e h e' h' → steps e1 h e2 h'.
+Proof. intros ? -> ->. apply steps_context. Qed.
+
+Create HintDb astep.
+Hint Resolve step_single : astep.
+Hint Resolve steps_contexta : astep.
+Hint Constructors head_step : astep.
+Hint Constructors steps : astep.
+Hint Constructors is_ctx : astep.
 
 Lemma steps_if_true e1 e2 m : steps (EIf (EVal (VBool true)) e1 e2) m e1 m.
 Proof.
-  econstructor.
-  rewrite <- (fill_empty_context (EIf (EVal (VBool true)) e1 e2)).
-  constructor.
-  eauto using head_step.
-  rewrite fill_empty_context.
-  constructor.
+  eauto with astep.
 Qed.
 
 Lemma steps_if_true' t e1 e2 m : steps t m (EVal (VBool true)) m →
                                  steps (EIf t e1 e2) m e1 m.
 Proof.
-  intro.
-  apply (steps_mono (EIf t e1 e2) (EIf (EVal (VBool true)) e1 e2) e1 m m m).
-  - rewrite <- 2 fill_if; apply steps_context; assumption.
-  - apply steps_if_true.
+  eauto using steps_trans with astep.
 Qed.
 
 Lemma steps_if_false e1 e2 m : steps (EIf (EVal (VBool false)) e1 e2) m e2 m.
 Proof.
-  econstructor.
-  rewrite <- (fill_empty_context (EIf (EVal (VBool false)) e1 e2)).
-  constructor.
-  eauto using head_step.
-  rewrite fill_empty_context.
-  constructor.
+  eauto with astep.
 Qed.
 
 Lemma steps_if_false' t e1 e2 m : steps t m (EVal (VBool false)) m →
                                  steps (EIf t e1 e2) m e2 m.
 Proof.
-  intro.
-  apply (steps_mono (EIf t e1 e2) (EIf (EVal (VBool false)) e1 e2) e2 m m m).
-  - rewrite <- 2 fill_if; apply steps_context; assumption.
-  - apply steps_if_false.
+  eauto using steps_trans with astep.
 Qed.
 
 (* as long as there is no errors when evaluating the binding [(s e1)] then
@@ -603,40 +438,30 @@ Qed.
 Lemma steps_let_val e m s (v : val):
   steps (ELet s (EVal v) e) m (subst s v e) m.
 Proof.
-  - econstructor.
-    rewrite <- (fill_empty_context (ELet s (EVal v) e)).
-    do 2 econstructor.
-    rewrite fill_empty_context.
-    econstructor.
+  eauto with astep.
 Qed.
 
 Lemma steps_let_val' e1 e2 m m' s (v : val):
   steps e1 m (EVal v) m' → steps (ELet s e1 e2) m (subst s v e2) m'.
 Proof.
   intro.
-  apply (steps_mono (ELet s e1 e2) (ELet s (EVal v) e2) (subst s v e2) m m' m').
-  - rewrite <- 2 fill_let; apply steps_context; assumption.
-  - apply steps_let_val.
+  eapply steps_trans. eapply steps_contexta; [eapply is_LetCtx|..]; eauto.
+  simpl. eauto with astep.
 Qed.
 
 Lemma steps_seq_val e e' v m m':
   steps e m e' m' → steps (ESeq (EVal v) e) m e' m'.
 Proof.
-  econstructor.
-  rewrite <- (fill_empty_context (ESeq (EVal v) e)).
-  econstructor.
-  eauto with head_step.
-  rewrite fill_empty_context.
-  assumption.
+  eauto with astep.
 Qed.
 
 Lemma steps_seq_val' e e' e'' m m' m'' (v : val):
   steps e m (EVal v) m' → steps e' m' e'' m'' → steps (ESeq e e') m e'' m''.
 Proof.
   intros.
-  apply (steps_mono (ESeq e e') (ESeq (EVal v) e') e'' m m' m'').
-  - rewrite <- 2 fill_seq; apply steps_context; assumption.
-  - auto using steps_seq_val.
+  apply (steps_trans (ESeq e e') (ESeq (EVal v) e') e'' m m' m'').
+  - eauto with astep.
+  - eauto with astep.
 Qed.
 
 Lemma steps_alloc_val e m m' v l:
@@ -644,12 +469,11 @@ Lemma steps_alloc_val e m m' v l:
   steps e m (EVal v) m' → steps (EAlloc e) m (EVal (VLoc l)) (<[l:=(Value v)]> m').
 Proof.
   intros U H.
-  eapply steps_mono.
+  eapply steps_trans.
   rewrite <- fill_alloc.
   eapply steps_context.
   eassumption.
-  rewrite fill_alloc.
-  auto using steps_single with head_step.
+  eauto with astep.
 Qed.
 
 Lemma steps_free_val e m m' l v:
@@ -657,12 +481,11 @@ Lemma steps_free_val e m m' l v:
   steps e m (EVal (VLoc l)) m' → steps (EFree e) m (EVal VUnit) (<[ l := Reserved ]> m').
 Proof.
   intros U H.
-  eapply steps_mono.
+  eapply steps_trans.
   rewrite <- fill_free.
   eapply steps_context.
   eassumption.
-  rewrite fill_free.
-  eauto using steps_single with head_step.
+  eauto with astep.
 Qed.
 
 Lemma steps_load_val e m m' l v:
@@ -670,12 +493,11 @@ Lemma steps_load_val e m m' l v:
   steps e m (EVal (VLoc l)) m' → steps (ELoad e) m (EVal v) m'.
 Proof.
   intros U H.
-  eapply steps_mono.
+  eapply steps_trans.
   rewrite <- fill_load.
   eapply steps_context.
   eassumption.
-  rewrite fill_load.
-  eauto using steps_single with head_step.
+  eauto with astep.
 Qed.
 
 Lemma steps_store_val e e' m m' m'' l v w:
@@ -685,12 +507,12 @@ Lemma steps_store_val e e' m m' m'' l v w:
   steps (EStore e e') m (EVal VUnit) (<[l:= (Value v)]> m'').
 Proof.
   intros U Hl Hr.
-  eapply steps_mono.
+  eapply steps_trans.
   rewrite <- fill_store_l.
   eapply steps_context.
   eassumption.
   rewrite fill_store_l.
-  eapply steps_mono.
+  eapply steps_trans.
   rewrite <- fill_store_r.
   eapply steps_context.
   eassumption.

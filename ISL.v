@@ -154,49 +154,6 @@ Proof.
   destruct b; eauto using head_step.
 Qed.
 
-(* now this example may error if the test evaluates to true *)
-Example may_error := (EIf amb_bool EError (EVal VUnit)).
-
-Lemma may_error_contains_error : ∀ m,  contains_error may_error m.
-Proof.
-  unfold contains_error, may_error, amb_bool.
-  intros.
-  eexists EError, m.
-  split.
-  - apply (steps_step
-             m m m
-             (EIf (EOp EqOp EAmb (EVal (VNat 0))) EError (EVal VUnit))
-             (EIf (EOp EqOp (EVal (VNat 0)) (EVal (VNat 0))) EError (EVal VUnit))).
-    + change (EIf (EOp EqOp EAmb (EVal (VNat 0))) EError (EVal VUnit)) with
-          (fill [(IfCtx EError (EVal VUnit)); (OpCtxL EqOp (EVal (VNat 0)))] EAmb).
-      change (EIf (EOp EqOp (EVal (VNat 0)) (EVal (VNat 0))) EError (EVal VUnit)) with
-          (fill [(IfCtx EError (EVal VUnit)); (OpCtxL EqOp (EVal (VNat 0)))] (EVal (VNat 0))).
-      constructor.
-      constructor.
-    + apply (steps_step
-             m m m
-             (EIf (EOp EqOp (EVal (VNat 0)) (EVal (VNat 0))) EError (EVal VUnit))
-             (EIf (EVal (VBool true)) EError (EVal VUnit))).
-      * change (EIf (EOp EqOp (EVal (VNat 0)) (EVal (VNat 0))) EError (EVal VUnit)) with
-            (fill [(IfCtx EError (EVal VUnit))] (EOp EqOp (EVal (VNat 0)) (EVal (VNat 0)))).
-        change (EIf (EVal (VBool true)) EError (EVal VUnit)) with
-            (fill [(IfCtx EError (EVal VUnit))] (EVal (VBool true))).
-        constructor.
-        constructor.
-        simpl.
-        reflexivity.
-      * apply steps_if_true.
-  - unfold is_error.
-    split; auto.
-    intros.
-    intro.
-    inversion H.
-    destruct E; simpl in *.
-    + subst.
-      inversion H1.
-    + destruct c; simpl in *; discriminate || auto.
-Qed.
-
 (* if an error state is reachable in a sub-expression then we might get lucky *)
 Lemma contains_error_mono e e' h h' :
   steps e h e' h' → contains_error e' h' → contains_error e h.
@@ -206,7 +163,7 @@ Proof.
   destruct H0. destruct H0. destruct H0.
   eexists x, x0.
   split; auto.
-  eapply steps_mono; eassumption.
+  eapply steps_trans; eassumption.
 Qed.
 
 Definition will_error (P : mem → Prop) (e : expr) := ∃ h h' e', P h ∧ steps e h e' h' ∧ is_error e' h'.
@@ -224,114 +181,6 @@ Example b := ([ iEmpty ] amb_bool [[ x , iEmpty ]]).
 
 Definition under_approximation (P : mem → Prop) (e : expr) (Q : val → mem → Prop) :=
   will_error P e ∨ reaches P e Q.
-
-Lemma client_can_error : will_error iEmpty client.
-Proof.
-  unfold will_error, client.
-  exists empty.
-  (* {[ 0 := (VNat 0) ]} ∪ {[ 1 := (VLoc 0) ]} ∪ {[ 2 := (VNat 42) ]}. *)
-  exists ({[ 0 := Reserved ]} ∪ {[ 1 := (Value (VLoc 2)) ]} ∪ {[ 2 := (Value (VNat 42)) ]}).
-  exists (EStore (EVal (VLoc 0)) (EVal (VNat 88))).
-  split; [done |].
-  split.
-  - eapply steps_mono.
-    eapply steps_let_val'.
-    + apply steps_single.
-      apply (Alloc_headstep ∅ (VNat 0) 0).
-      unfold valid_alloc.
-      intros e H.
-      exfalso.
-      eapply lookup_empty_is_Some.
-      eexists e.
-      eauto.
-    + rewrite insert_empty.
-      simpl subst.
-      eapply steps_mono.
-      eapply steps_let_val'.
-      * apply steps_single.
-        apply (Alloc_headstep {[0:= (Value (VNat 0))]} (VLoc 0) 1).
-        unfold valid_alloc.
-        rewrite lookup_singleton_ne.
-        discriminate.
-        auto.
-      * simpl subst.
-        rewrite insert_union_singleton_l.
-        eapply steps_mono.
-        eapply steps_let_val'.
-        -- apply steps_single.
-           econstructor.
-           eapply lookup_union_Some; auto.
-           rewrite map_disjoint_singleton_l. auto using lookup_singleton_None.
-        -- simpl subst.
-           eapply steps_seq_val'.
-           ++ eapply steps_mono.
-              eapply steps_let_val'.
-              ** apply steps_single.
-                 apply (Amb_headstep ({[1 := (Value (VLoc 0))]} ∪ {[0 := (Value (VNat 0))]}) 1).
-              ** simpl subst.
-                 eapply steps_mono.
-                 apply steps_if_false'.
-                 --- eauto using steps_single, head_step.
-                 --- eapply steps_mono. apply steps_let_val'.
-                     +++ eauto using steps_single, head_step.
-                     +++ simpl subst.
-                         eapply steps_seq_val'.
-                         *** eauto using steps_single, head_step.
-                         *** eapply steps_mono.
-                             ---- apply steps_let_val'.
-                                  apply steps_single.
-                                  rewrite insert_union_r.
-                                  rewrite insert_singleton.
-                                  apply (Alloc_headstep ({[1 := Value (VLoc 0)]} ∪ {[0 := Reserved]}) (VNat 42) 2).
-                                  unfold valid_alloc.
-                                  intros.
-                                  erewrite lookup_union_Some in H.
-                                  destruct H as [H | H]; rewrite lookup_singleton_ne in H; discriminate.
-                                  solve_map_disjoint.
-                                  auto using lookup_singleton_ne.
-                             ---- simpl subst.
-                                  apply steps_single.
-                                  eauto using head_step.
-           ++ rewrite insert_commute; eauto.
-              rewrite insert_union_l.
-              rewrite insert_union_singleton_r.
-              rewrite insert_singleton.
-              assert (
-                  ({[1 := Value (VLoc 2)]} ∪ {[0 := Reserved]} : mem)
-                  =
-                  ({[0 := Reserved]} ∪ {[1 := Value (VLoc 2)]})
-              ).
-              { admit. }
-              assert (
-                  ({[1 := Value (VLoc 2)]} ∪ {[0 := Reserved]} ∪ {[2 := Value (VNat 42)]}: mem)
-                  =
-                  ({[0 := Reserved]} ∪ {[1 := Value (VLoc 2)]} ∪ {[2 := Value (VNat 42)]})
-              ).
-              { admit. }
-              rewrite H0.
-              apply steps_refl.              
-              rewrite lookup_union_None.
-              split; simpl_map; reflexivity.
-  - unfold is_error.
-    split.
-    + auto.
-    + intros.
-      intro.
-      erewrite step_store_inv in H. destruct H as (w & lookup_h & _ & _).
-      do 2 erewrite lookup_union_Some in lookup_h.
-      destruct lookup_h as [ [a|b] | c].
-      * rewrite lookup_singleton in a.
-        discriminate.
-      * rewrite lookup_singleton_ne in b.
-        discriminate.
-        auto.
-      * rewrite lookup_singleton_ne in c.
-        discriminate.
-        auto.
-      * solve_map_disjoint.
-      * solve_map_disjoint.
-      * solve_map_disjoint.
-Admitted.
 
 Definition iProp := mem → Prop.
 
@@ -435,8 +284,8 @@ Lemma iForall_intro {A} P (Q : A → iProp) : (∀ x, P ⊢ Q x) → (P ⊢ All 
 Proof. duh. Qed.
 
 Lemma iForall_elim {A} (P : A → iProp) x : (All z, P z) ⊢ P x.
-Proof. duh. Qed.
 
+Proof. duh. Qed.
 Lemma iExist_intro {A} (P : A → iProp) x : P x ⊢ Ex z, P z.
 Proof. duh. Qed.
 
@@ -560,9 +409,8 @@ Proof.
   split. { solve_map_disjoint. }
   split. {
     do 2 eexists.
-    split; first done.
-    split; first done.
-    split. { rewrite map_union_comm; solve_map_disjoint. }
+    split_and!; eauto.
+    { rewrite map_union_comm; solve_map_disjoint. }
     solve_map_disjoint.
   }
   rewrite !assoc in Hsteps.
@@ -585,15 +433,7 @@ Definition hoare_err (P Q : iProp) (e : expr) : Prop :=
 Lemma post_val v (Q : val -> iProp) :
   (Q v) ⊢ post (EVal v) (Q v) (Some v).
 Proof.
-  iUnfold.
-  intros.
-  intros mf Hdisj.
-  eexists m, (EVal v).
-  split; auto.
-  split; auto.
-  split; auto using steps_refl.
-  simpl.
-  reflexivity.
+  iUnfold. intros ???. repeat eexists; eauto using steps_refl.
 Qed.
 
 (* how does this work with reducing anywhere in an expression? *)
@@ -604,23 +444,8 @@ Proof.
   intros m H mf Hdisj.
   specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps' & Herror').
   specialize (H' mf Hdisj') as (m'' & e'' & Hdisj'' & H'' & Hsteps'' & Herror'').
-  destruct v; simpl in *; subst.
-  - exists m'', (EVal v).
-    split; auto.
-    split; auto.
-    split; auto.
-    eapply steps_mono.
-    + apply steps_context.
-      eassumption.
-    + assumption.
-  - exists m'', e'.
-    split; auto.
-    split; auto.
-    split; auto.
-    eapply steps_mono.
-    + apply steps_context.
-      eassumption.
-    + assumption.
+  destruct v; asimpl;
+  eauto 10 using steps_trans, steps_context.
 Qed.
 
 Lemma post_ctx' E e P:
@@ -628,13 +453,9 @@ Lemma post_ctx' E e P:
 Proof.
   intros m H mf Hdisj.
   specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps' & Herror).
-  simpl in *.
-  exists m', (fill E e').
-  split; auto.
-  split; auto.
-  eauto using steps_context, is_error_fill.
+  simpl. eauto 8 using steps_context, is_error_fill.
 Qed.
-    
+
 Lemma post_let x v w e1 e2 P :
   post (subst x w e2) (post e1 P (Some w)) v ⊢ post (ELet x e1 e2) P v.
 Proof.
@@ -644,14 +465,7 @@ Proof.
   simpl fill.
   intros mf Hdisj.
   destruct (H mf) as (m' & e' & H' & Hdisj' & Hsteps & Hval); auto.
-  exists m', e'.
-  split; eauto.
-  split; eauto.
-  split; eauto.
-  eapply steps_mono.
-  - apply steps_let_val'.
-    apply steps_refl.
-  - auto.
+  eauto 8 with astep.
 Qed.
 
 Lemma post_seq e1 e2 P w v:
@@ -663,14 +477,7 @@ Proof.
   simpl fill.
   intros mf Hdisj.
   destruct (H mf) as (m' &e' & H' & Hdisj' & Hsteps & Hval); auto.
-  exists m', e'.
-  split; eauto.
-  split; eauto.
-  split; eauto.
-  eapply steps_mono.
-  - apply steps_seq_val.
-    apply steps_refl.
-  - auto.
+  eauto 8 with astep.
 Qed.
 
 Lemma post_seq' e1 e2 P:
@@ -690,12 +497,8 @@ Proof.
   eapply post_ctx.
   simpl fill.
   intros mf Hdisj.
-  specialize (H mf) as (m' & e' & H' & Hdisj' & Hsteps & H); auto.
-  exists m', e'.
-  split; eauto.
-  split; eauto.
-  split; eauto.
-  eapply steps_mono; auto using steps_if_true.
+  specialize (H mf) as (m' & e' & H' & Hdisj' & Hsteps & H);
+  eauto 10 using steps_trans, steps_if_true.
 Qed.
 
 Lemma post_if_false t e1 e2 P v:
@@ -706,12 +509,8 @@ Proof.
   eapply post_ctx.
   simpl fill.
   intros mf Hdisj.
-  specialize (H mf) as (m' & e' & H' & Hdisj' & Hsteps & H); auto.
-  exists m', e'.
-  split; eauto.
-  split; eauto.
-  split; eauto.
-  eapply steps_mono; auto using steps_if_false.
+  specialize (H mf) as (m' & e' & H' & Hdisj' & Hsteps & H);
+  eauto 10 using steps_trans, steps_if_false.
 Qed.
 
 Lemma post_while t e P v:
@@ -721,14 +520,7 @@ Proof.
   intros m H.
   intros mf Hdisj.
   specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps & H).
-  exists m', e'.
-  split; eauto.
-  split; eauto.
-  split; eauto.
-  eapply steps_step.
-  - rewrite <- (fill_empty_context (EWhile t e)).
-    do 2 constructor.
-  - auto using fill_empty_context.
+  eauto 8 with astep.
 Qed.
 
 
@@ -739,12 +531,7 @@ Lemma post_op op v1 v2 v P:
   P ⊢ post (EOp op (EVal v1) (EVal v2)) P (Some v).
 Proof.
   intros Hop m HP mf Hdisj.
-  exists m, (EVal v).
-  split; eauto.
-  split; eauto.
-  split; eauto.
-  eauto using steps_single, head_step.
-  simpl; auto.
+  repeat eexists; eauto with astep.
 Qed.
 
 Lemma post_error P :
@@ -752,13 +539,7 @@ Lemma post_error P :
 Proof.
   iUnfold.
   intros m Hp mf Hdisj.
-  exists m, EError.
-  split; auto.
-  split; auto.
-  split; auto using steps_refl.
-  split; auto.
-  intros e' m' H.
-  apply <- step_error. eassumption.
+  repeat eexists; eauto 10 using step_error with astep.
 Qed.
 
 
@@ -772,7 +553,7 @@ Proof.
   simpl_map. split. auto.
   split.
   - eapply steps_step.
-    2:{ apply steps_refl. }.
+    2:{ apply steps_refl. }
     unfold iPoints in H.
     subst m.
     rewrite delete_singleton.
@@ -799,39 +580,18 @@ Proof.
   - (* l is not in mf so we are ok but we have to go through the disjoint definition *)
     apply map_disjoint_spec.
     intros.
-    destruct (Nat.eq_dec l i) as [Heq|Hneq].
-    + subst i.
-      eapply map_disjoint_spec.
-      eassumption.
-      unfold iPoints in H; subst.
-      apply lookup_singleton.
-      eassumption.
-    + rewrite lookup_singleton_ne in H0.
-      discriminate.
-      assumption.
-  - split.
-    iUnfold. reflexivity.
-    split.
-    + unfold iPoints in H.
-      subst m.
-      rewrite <- (insert_singleton l Reserved (Value v)).
-      eapply steps_step. 2: { apply steps_refl. }.
-      rewrite <- (insert_union_l {[l:=Reserved]} mf l (Value v)).
-      apply step_alloc.
-      unfold valid_alloc.
-      intros.
-      erewrite lookup_union_Some in H.
-      destruct H as [H|H].
-      * rewrite lookup_singleton in H.
-        inversion H. reflexivity.
-      * exfalso.
-        eapply map_disjoint_spec.
-        eassumption.
-        apply lookup_singleton.
-        eassumption.
-      * solve_map_disjoint.
-    + simpl.
-      reflexivity.
+    unfold iPoints in H.
+    apply lookup_singleton_Some in H0 as []; asimpl.
+    assert (mf !! i = None). { solve_map_disjoint. } simplify_eq.
+  - repeat split; try done.
+    unfold iPoints in H. subst.
+    rewrite <- (insert_singleton l Reserved (Value v)).
+    eapply steps_step. 2: { apply steps_refl. }
+    rewrite <- (insert_union_l {[l:=Reserved]} mf l (Value v)).
+    apply step_alloc.
+    unfold valid_alloc.
+    rewrite lookup_union lookup_singleton. intros.
+    destruct (mf !! l); simpl in *; simplify_eq; eauto.
 Qed.
 
 Lemma post_free l v:
@@ -850,7 +610,7 @@ Proof.
       apply insert_singleton.
     + split.
       eapply steps_step.
-      2: { apply steps_refl. }.
+      2: { apply steps_refl. }
       * unfold iNegPoints in H.
         subst m.
         rewrite insert_singleton.
@@ -865,7 +625,7 @@ Proof.
 Qed.
 
 Lemma post_free_err l:
-  iNegPoints l  ⊢ post (EFree (EVal (VLoc l))) (iNegPoints l) None.
+  iNegPoints l ⊢ post (EFree (EVal (VLoc l))) (iNegPoints l) None.
 Proof.
   intros m H mf Hdisj.
   exists m, (EFree (EVal (VLoc l))).
@@ -879,12 +639,8 @@ Proof.
   intros e' m' Hstep.
   erewrite step_free_inv in Hstep.
   destruct Hstep as (_ & Hlookup & _).
-  apply Hlookup.
-  apply lookup_union_None.
-  split; eauto.
-  admit.
 Admitted.
-    
+
 Lemma post_load l v:
   l ↦ v ⊢ post (ELoad (EVal (VLoc l))) (l ↦ v) (Some v).
 Proof.
@@ -921,8 +677,7 @@ Proof.
     unfold iNegPoints in H.
     rewrite * lookup_union_Some in Hm by assumption.
     destruct Hm as [Hlookup_m | Hlookup_mf].
-    + rewrite H in Hlookup_m.
-      discriminate.
+    + rewrite H in Hlookup_m. admit.
     + admit.
 Admitted.
 
@@ -930,7 +685,8 @@ Lemma post_store l v v':
   (l ↦ v') ⊢ post (EStore (EVal (VLoc l)) (EVal v')) (l ↦ v) (Some VUnit).
 Proof.
   intros m H mf Hdisj.
-  exists (<[ l := v ]> m), (EVal VUnit).
+Admitted.
+  (* exists (<[ l := v ]> m), (EVal VUnit).
   split.
   admit.
   split.
@@ -954,7 +710,7 @@ Proof.
     rewrite ! insert_singleton.
     apply steps_refl.
   - simpl; reflexivity.
-Admitted.
+Admitted. *)
 
 Lemma post_store_err l v:
   (iNegPoints l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iNegPoints l) None.
