@@ -418,25 +418,11 @@ Proof.
   rewrite map_union_comm; solve_map_disjoint.
 Qed.
 
-(* the incorrectness triple is valid if for any state describe by (Q v)
-   we can reach it from a state in P after executing P under final value v.
-
-   Point wise entailment here represents the subset relation so (Q v) ⊂ post e P v
-
-   NB this is still correct for Q v = false as no heap satisfies false *)
-Definition hoare (P : iProp) (e : expr) (Q : val -> iProp) v : Prop :=
-  (Q v) ⊢ (post e P (Some v)).
-
-Definition hoare_err (P Q : iProp) (e : expr) : Prop :=
-  Q ⊢ (post e P None).
-
 Lemma post_val v (Q : val -> iProp) :
   (Q v) ⊢ post (EVal v) (Q v) (Some v).
 Proof.
   iUnfold. intros ???. repeat eexists; eauto using steps_refl.
 Qed.
-
-(* how does this work with reducing anywhere in an expression? *)
 
 Lemma post_ctx E e P v w :
   post (fill E (EVal w)) (post e P (Some w)) v ⊢ post (fill E e) P v.
@@ -738,6 +724,29 @@ Proof.
   erewrite lookup_union_Some_l in lookup_some.
   2: { unfold iNegPoints in H. subst m. apply lookup_singleton. }
   discriminate.
+Qed.
+
+(* the incorrectness triple is valid if for any state describe by (Q v)
+   we can reach it from a state in P after executing P under final value v.
+
+   Point wise entailment here represents the subset relation so (Q v) ⊂ post e P v
+
+   NB this is still correct for Q v = false as no heap satisfies false *)
+Definition hoare (P : iProp) (e : expr) (Q : val -> iProp) : Prop :=
+  ∀ v, (Q v) ⊢ (post e P (Some v)).
+
+Definition hoare_err (P Q : iProp) (e : expr) : Prop :=
+  Q ⊢ (post e P None).
+
+Lemma hoare_alloc1 v :
+  hoare emp (EAlloc (EVal v)) (λ l, Ex n, ⌜ l = VLoc n ⌝ ∗ n ↦ v).
+Proof.
+  intros v'.
+  eapply iExist_elim.
+  intros n.
+  eapply iPure_elim.
+  intros ->.
+  eapply post_alloc''.
 Qed.
 
 (* this is about evaluation of pure expressions *)
