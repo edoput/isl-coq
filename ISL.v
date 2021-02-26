@@ -755,14 +755,32 @@ Admitted.
 Admitted. *)
 
 Lemma post_store_err l v:
-  (iNegPoints l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iNegPoints l) None.
+  (iUnallocated l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iUnallocated l) None.
 Proof.
 Admitted.
 
 Lemma post_store_after_free l v:
-  (iNegPoints l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iNegPoints l) None.
+  (l ↦ ⊥) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (l ↦ ⊥) None.
 Proof.
-Admitted.
+  intros m H mf Hdisj.
+  exists m, (EStore (EVal (VLoc l)) (EVal v)).
+  split; auto.
+  split; auto.
+  split.
+  - apply steps_refl.
+  - simpl.
+    unfold is_error.
+    split; auto.
+    intros e' m' Hstep.
+    erewrite step_store_inv in Hstep.
+    destruct Hstep as (w & lookup_some & unit & final_heap).
+    erewrite lookup_union_Some_l in lookup_some.
+    2: { unfold iNegPoints in H. subst m. apply lookup_singleton. }
+    discriminate.
+Qed.
+
+(* this is about evaluation of pure expressions *)
+
 (*
 
 Question: which of these do we want?
