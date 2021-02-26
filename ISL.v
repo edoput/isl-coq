@@ -456,16 +456,32 @@ Proof.
   simpl. eauto 8 using steps_context, is_error_fill.
 Qed.
 
-Lemma post_let x v w e1 e2 P :
-  post (subst x w e2) (post e1 P (Some w)) v ⊢ post (ELet x e1 e2) P v.
+
+Definition pure_step (e e' : expr) := ∀ h,  step e h e' h.
+
+Lemma post_pure_step e e' P v :
+  pure_step e e' → post e' P v ⊢ post e P v.
 Proof.
-  intros m H.
-  rewrite <- fill_let.
-  eapply post_ctx.
-  simpl fill.
-  intros mf Hdisj.
-  destruct (H mf) as (m' & e' & H' & Hdisj' & Hsteps & Hval); auto.
-  eauto 8 with astep.
+  intros pure m H mf Hdisj.
+  specialize (H mf Hdisj) as (m' & e'' &  Hdisj' & HP & Hsteps & H).
+  exists m', e''.
+  split; auto.
+  split; auto.
+  split.
+  - unfold pure_step in pure.
+    eapply steps_step.
+    apply (pure (m ∪ mf)).
+    assumption.
+  - assumption.
+Qed.
+
+Lemma post_let_step s e2 v x P:
+  post (subst s v e2) P x ⊢ post (ELet s (EVal v) e2) P x.
+Proof.
+  apply post_pure_step.
+  intro m.
+  apply step_single.
+  eauto using head_step.
 Qed.
 
 Lemma post_seq e1 e2 P w v:
@@ -611,7 +627,12 @@ Proof.
 Qed.
 
 Lemma post_free_err l:
-  iNegPoints l ⊢ post (EFree (EVal (VLoc l))) (iNegPoints l) None.
+  iUnallocated l ⊢ post (EFree (EVal (VLoc l))) (iUnallocated l) None.
+Proof.
+Admitted.
+
+Lemma post_double_free l:
+  iNegPoints l  ⊢ post (EFree (EVal (VLoc l))) (l ↦ ⊥) None.
 Proof.
   intros m H mf Hdisj.
   eexists _,_.
@@ -636,6 +657,11 @@ Proof.
 Qed.
 
 Lemma post_load_err l:
+  iUnallocated l ⊢ post (ELoad (EVal (VLoc l))) (iUnallocated l) None.
+Proof.
+Admitted.
+
+Lemma post_load_after_free l:
   iNegPoints l ⊢ post (ELoad (EVal (VLoc l))) (iNegPoints l) None.
 Proof.
   intros m H mf Hdisj.
@@ -665,7 +691,7 @@ Proof.
 Qed.
 
 Lemma post_store_err l v:
-  (iNegPoints l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iNegPoints l) None.
+  (iUnallocated l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iUnallocated l) None.
 Proof.
   intros m H mf Hdisj.
   eexists _,_.
@@ -678,6 +704,28 @@ Proof.
   + specialize (Hdisj l). rewrite H in Hdisj.
     rewrite lookup_singleton in Hdisj. by asimpl.
 Qed.
+
+Lemma post_store_after_free l v:
+  (l ↦ ⊥) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (l ↦ ⊥) None.
+Proof.
+  intros m H mf Hdisj.
+  exists m, (EStore (EVal (VLoc l)) (EVal v)).
+  split; auto.
+  split; auto.
+  split.
+  - apply steps_refl.
+  - simpl.
+    unfold is_error.
+    split; auto.
+    intros e' m' Hstep.
+    erewrite step_store_inv in Hstep.
+    destruct Hstep as (w & lookup_some & unit & final_heap).
+    erewrite lookup_union_Some_l in lookup_some.
+    2: { unfold iNegPoints in H. subst m. apply lookup_singleton. }
+    discriminate.
+Qed.
+
+(* this is about evaluation of pure expressions *)
 
 (*
 
