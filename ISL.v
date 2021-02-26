@@ -225,7 +225,7 @@ Notation "'Ex' x1 .. xn , P" :=
   (at level 200, x1 binder, xn binder, right associativity).
 
 
-Ltac iUnfold := unfold iEmp, iNegPoints, iUnallocated, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails, iAnd, iOr.
+Ltac iUnfold := unfold iEmp, iNegPoints, iUnallocated, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails, iAnd, iOr in *.
 Ltac duh := iUnfold;
   naive_solver (
     rewrite ?map_union_assoc ?left_id ?right_id;
@@ -542,6 +542,11 @@ Proof.
   repeat eexists; eauto 10 using step_error with astep.
 Qed.
 
+Lemma step_once e1 e2 h1 h2 :
+  step e1 h1 e2 h2 -> steps e1 h1 e2 h2.
+Proof.
+  eauto using steps_step, steps_refl.
+Qed.
 
 Lemma post_alloc l v:
   l ↦ v ⊢ post (EAlloc (EVal v)) (λ m, m !! l = None) (Some (VLoc l)).
@@ -552,8 +557,7 @@ Proof.
   solve_map_disjoint.
   simpl_map. split. auto.
   split.
-  - eapply steps_step.
-    2:{ apply steps_refl. }
+  - apply step_once.
     unfold iPoints in H.
     subst m.
     rewrite delete_singleton.
@@ -586,7 +590,7 @@ Proof.
   - repeat split; try done.
     unfold iPoints in H. subst.
     rewrite <- (insert_singleton l Reserved (Value v)).
-    eapply steps_step. 2: { apply steps_refl. }
+    apply step_once.
     rewrite <- (insert_union_l {[l:=Reserved]} mf l (Value v)).
     apply step_alloc.
     unfold valid_alloc.
@@ -598,124 +602,82 @@ Lemma post_free l v:
   l ↦ ⊥ ⊢ post (EFree (EVal (VLoc l))) (l ↦ v) (Some VUnit).
 Proof.
   intros m H mf Hdisj.
-  exists (<[ l := (Value v) ]> m), (EVal VUnit).
-  split.
-  - unfold iNegPoints in H.
-    subst m.
-    solve_map_disjoint.
-  - split.
-    + iUnfold.
-      unfold iNegPoints in H.
-      subst m.
-      apply insert_singleton.
-    + split.
-      eapply steps_step.
-      2: { apply steps_refl. }
-      * unfold iNegPoints in H.
-        subst m.
-        rewrite insert_singleton.
-        rewrite <- (insert_singleton l (Value v) Reserved).
-        rewrite <- insert_union_l.
-        eapply step_free.
-        exists v.
-        erewrite lookup_union_Some_l.
-        eauto.
-        apply lookup_insert.
-      * simpl; auto.
+  exists (<[ l := (Value v) ]> m), (EVal VUnit). iUnfold. subst.
+  split_and!; rewrite ?insert_singleton; simpl; try solve_map_disjoint.
+  apply step_once.
+  erewrite <- (insert_singleton _ _ Reserved), <-insert_union_l.
+  eapply step_free. exists v.
+  apply lookup_union_Some_l, lookup_insert.
 Qed.
 
 Lemma post_free_err l:
   iNegPoints l ⊢ post (EFree (EVal (VLoc l))) (iNegPoints l) None.
 Proof.
   intros m H mf Hdisj.
-  exists m, (EFree (EVal (VLoc l))).
-  split; eauto.
-  split; eauto.
-  split.
-  apply steps_refl.
-  simpl.
-  unfold is_error.
+  eexists _,_.
+  split_and!;eauto with astep.
   split; auto.
   intros e' m' Hstep.
-  erewrite step_free_inv in Hstep.
-  destruct Hstep as (_ & Hlookup & _).
-Admitted.
+  apply step_free_inv in Hstep as (? & ? & []). iUnfold. subst.
+  apply lookup_union_Some in H1 as []; eauto.
+  + apply lookup_singleton_Some in H as []. asimpl.
+  + specialize (Hdisj l). rewrite H in Hdisj.
+    rewrite lookup_singleton in Hdisj. by asimpl.
+Qed.
 
 Lemma post_load l v:
   l ↦ v ⊢ post (ELoad (EVal (VLoc l))) (l ↦ v) (Some v).
 Proof.
   intros m H mf Hdisj.
-  exists m, (EVal v).
-  split; auto.
-  split; auto.
-  split.
-  eapply steps_step.
-  - apply step_load.
-    apply lookup_union_Some_l.
-    unfold iPoints in H.
-    subst.
-    apply lookup_singleton.
-  - apply steps_refl.
-  - simpl; reflexivity.
+  exists m, (EVal v). simpl.
+  split_and!; eauto.
+  iUnfold. subst.
+  apply step_once, step_load, lookup_union_Some_l, lookup_singleton.
 Qed.
 
 Lemma post_load_err l:
   iNegPoints l ⊢ post (ELoad (EVal (VLoc l))) (iNegPoints l) None.
 Proof.
   intros m H mf Hdisj.
-  exists m, (ELoad (EVal (VLoc l))).
-  split; auto.
-  split; auto.
-  split.
-  - apply steps_refl.
-  - simpl.
-    unfold is_error.
-    split; auto.
-    intros e  m' Hstep.
-    erewrite step_load_inv in Hstep.
-    destruct Hstep as ( v & ( -> & Hm & _)).
-    unfold iNegPoints in H.
-    rewrite * lookup_union_Some in Hm by assumption.
-    destruct Hm as [Hlookup_m | Hlookup_mf].
-    + rewrite H in Hlookup_m. admit.
-    + admit.
-Admitted.
+  eexists _,_.
+  split_and!; eauto with astep. simpl.
+  split; auto. iUnfold. subst.
+  intros e  m' Hstep.
+  apply step_load_inv in Hstep as ( v & ( -> & Hm & _)).
+  apply lookup_union_Some in Hm as []; auto.
+  + rewrite lookup_singleton in H. asimpl.
+  + specialize (Hdisj l). rewrite H in Hdisj.
+    rewrite lookup_singleton in Hdisj. by asimpl.
+Qed.
 
 Lemma post_store l v v':
   (l ↦ v') ⊢ post (EStore (EVal (VLoc l)) (EVal v')) (l ↦ v) (Some VUnit).
 Proof.
   intros m H mf Hdisj.
-Admitted.
-  (* exists (<[ l := v ]> m), (EVal VUnit).
-  split.
-  admit.
-  split.
-  unfold iPoints in *.
-  subst m.
-  apply insert_singleton.
-  split.
-  eapply steps_step.
-  apply step_store.
-  - intro.
-    erewrite lookup_union_None in H0.
-    destruct H0 as (Hm & Hmf).
-    unfold iPoints in H.
-    subst m.
-    rewrite insert_singleton in Hm.
-    rewrite lookup_singleton in Hm.
-    discriminate.
-  - unfold iPoints in *.
-    subst m.
-    rewrite insert_union_l.
-    rewrite ! insert_singleton.
-    apply steps_refl.
-  - simpl; reflexivity.
-Admitted. *)
+  exists (<[ l := Value v ]> m), (EVal VUnit). iUnfold. subst.
+  rewrite !insert_singleton.
+  split_and!;simpl;eauto.
+  + solve_map_disjoint.
+  + eapply step_once. apply step_single.
+    erewrite <-(insert_singleton _ _ (Value v')), <-insert_union_l.
+    econstructor.
+    apply lookup_union_Some_l, lookup_singleton.
+Qed.
 
 Lemma post_store_err l v:
   (iNegPoints l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iNegPoints l) None.
 Proof.
-Admitted.
+  intros m H mf Hdisj.
+  eexists _,_.
+  split_and!; eauto with astep. simpl.
+  split; auto. iUnfold. subst.
+  intros e  m' Hstep.
+  apply step_store_inv in Hstep as ( ? & ( ? & Hm & ?)). subst.
+  apply lookup_union_Some in H as []; auto.
+  + rewrite lookup_singleton in H. asimpl.
+  + specialize (Hdisj l). rewrite H in Hdisj.
+    rewrite lookup_singleton in Hdisj. by asimpl.
+Qed.
 
 (*
 
