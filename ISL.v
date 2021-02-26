@@ -671,12 +671,17 @@ Proof.
     apply lookup_union_Some_l.
     unfold iPoints in H.
     subst.
-    apply lookup_singleton.
+    eassumption.
   - apply steps_refl.
   - simpl; reflexivity.
 Qed.
 
 Lemma post_load_err l:
+  iUnallocated l ⊢ post (ELoad (EVal (VLoc l))) (iUnallocated l) None.
+Proof.
+Admitted.
+
+Lemma post_load_after_free l:
   iNegPoints l ⊢ post (ELoad (EVal (VLoc l))) (iNegPoints l) None.
 Proof.
   intros m H mf Hdisj.
