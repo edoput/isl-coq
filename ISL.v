@@ -614,6 +614,22 @@ Proof.
     destruct (mf !! l); simpl in *; simplify_eq; eauto.
 Qed.
 
+Lemma post_alloc'' v :
+  (Ex l, l ↦ v) ⊢ (Ex l, post (EAlloc (EVal v)) emp (Some (VLoc l))).
+Proof.
+  iUnfold.
+  intros. destruct H. subst.
+  eexists. intros ??. eexists _,_.
+  split_and!;[|done|..|done].
+  + solve_map_disjoint.
+  + rewrite left_id_L. apply step_once.
+    apply step_single.
+    rewrite -insert_union_singleton_l.
+    constructor. intros ??HH.
+    specialize (H x). revert H.
+    rewrite HH lookup_singleton //.
+Qed.
+
 Lemma post_free l v:
   l ↦ ⊥ ⊢ post (EFree (EVal (VLoc l))) (l ↦ v) (Some VUnit).
 Proof.
