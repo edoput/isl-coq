@@ -319,6 +319,10 @@ Proof. duh. Qed.
 Lemma iPure_elim (φ : Prop) P Q : (φ → P ⊢ Q) → ⌜ φ ⌝ ∗ P ⊢ Q.
 Proof. duh. Qed.
 
+Lemma iPure_elim' (φ : Prop) Q : (φ → emp ⊢ Q) → ⌜ φ ⌝ ⊢ Q.
+Proof. duh. Qed.
+
+
 (*
   It's not very clear to me how to write those as iProps.
   The iReaches seems plausible to me, but iError IDK.
@@ -353,48 +357,16 @@ Proof. duh. Qed.
  *)
 
 (* if we increase the set of initial states then we still cover all the final states *)
-Lemma post_mono_presume P R Q e v:
-  (P ⊢ R) → (Q ⊢ post e P v) → (Q ⊢ post e R v).
+Lemma post_mono P R Q e v:
+  (P ⊢ Q) → (R ⊢ post e P v) → (R ⊢ post e Q v).
 Proof.
-  intros H HP m HQ mf Hdisj.
-  specialize (HP m HQ mf Hdisj) as (m' & e' & Hdisj' & HP & Hsteps & Herror).
-  exists m', e'.
-  eauto.
+  intros ??HP????. edestruct HP; naive_solver.
 Qed.
 
-(* if we shrink the set of final heap states then we still cover them all *)
-Lemma post_mono_result P Q R e v:
-  (R ⊢ Q) → (Q ⊢ post e P v) → (R ⊢ post e P v).
+Lemma post_disj P Q R e v:
+  (R ⊢ post e P v) → (R ⊢ post e Q v) → (R ⊢ post e (P ∨ Q) v).
 Proof.
-  intros H HQ m HR.
-  specialize (HQ m (H m HR)).
-  assumption.
-Qed.
-
-Lemma post_cons P P' Q Q' e v:
-  (P ⊢ P') → (Q' ⊢ Q) → (Q ⊢ post e P v) → (Q' ⊢ post e P' v).
-Proof.
-  intros HP HQ H.
-  eapply iEntails_trans. eauto.
-  eapply post_mono_presume; eassumption.
-Qed.
-
-Lemma post_disj_presume P Q R e v:
-  (Q ⊢ post e P v) → (Q ⊢ post e R v) → (Q ⊢ post e (P ∨ R) v).
-Proof.
-  intros HP HR m HQ mf Hdisj.
-  specialize (HP m HQ mf Hdisj) as (m' & e' & Hdisj' & HP & Hsteps).
-  exists m', e'.
-  split. assumption.
-  split. apply iOr_intro_l. assumption.
-  assumption.
-Qed.
-
-Lemma post_disj_result P Q R e v:
-  (Q ⊢ post e P v) → (R ⊢ post e P v) → (Q ∨ R) ⊢ post e P v.
-Proof.
-  intros HQ HR m H.
-  destruct H; auto using HQ, HR.
+  intros HP?????. edestruct HP; naive_solver (by apply iOr_intro_l).
 Qed.
 
 Lemma post_frame P Q e v :
@@ -402,20 +374,11 @@ Lemma post_frame P Q e v :
 Proof.
   iUnfold.
   intros mT (m & m' & Hq & Hwp & -> & Hdisj) mf Hdisj'.
-  unfold post in *.
-  edestruct (Hwp (m ∪ mf)) as (m0 & e0 & Hdisj'' & Hp & Hsteps).
-  { solve_map_disjoint. }
+  edestruct (Hwp (m ∪ mf)) as (m0&e0&?&?&?&?); first solve_map_disjoint.
   exists (m0 ∪ m), e0.
-  split. { solve_map_disjoint. }
-  split. {
-    do 2 eexists.
-    split_and!; eauto.
-    { rewrite map_union_comm; solve_map_disjoint. }
-    solve_map_disjoint.
-  }
-  rewrite !assoc in Hsteps.
-  replace (m ∪ m') with (m' ∪ m); first done.
-  rewrite map_union_comm; solve_map_disjoint.
+  split_and!;[|eexists _,_;split_and!|..]; eauto;
+  try solve_map_disjoint; rewrite ?(map_union_comm m m') -?assoc_L; eauto.
+  apply map_union_comm. solve_map_disjoint.
 Qed.
 
 Lemma post_val v (Q : val -> iProp) :
@@ -424,21 +387,21 @@ Proof.
   iUnfold. intros ???. repeat eexists; eauto using steps_refl.
 Qed.
 
-Lemma post_ctx E e P v w :
+Lemma post_ctxS E e P v w :
   post (fill E (EVal w)) (post e P (Some w)) v ⊢ post (fill E e) P v.
 Proof.
   intros m H mf Hdisj.
-  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps' & Herror').
-  specialize (H' mf Hdisj') as (m'' & e'' & Hdisj'' & H'' & Hsteps'' & Herror'').
+  specialize (H mf Hdisj) as (?&?&Hdisj'&H'&?&?).
+  specialize (H' mf Hdisj') as (?&?&?&?&?&?).
   destruct v; asimpl;
   eauto 10 using steps_trans, steps_context.
 Qed.
 
-Lemma post_ctx' E e P:
+Lemma post_ctxN E e P:
   post e P None ⊢ post (fill E e) P None.
 Proof.
   intros m H mf Hdisj.
-  specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps' & Herror).
+  specialize (H mf Hdisj) as (?&?&?&?&?&?).
   simpl. eauto 8 using steps_context, is_error_fill.
 Qed.
 
@@ -449,45 +412,35 @@ Lemma post_pure_step e e' P v :
   pure_step e e' → post e' P v ⊢ post e P v.
 Proof.
   intros pure m H mf Hdisj.
-  specialize (H mf Hdisj) as (m' & e'' &  Hdisj' & HP & Hsteps & H).
-  exists m', e''.
-  split; auto.
-  split; auto.
-  split.
-  - unfold pure_step in pure.
-    eapply steps_step.
-    apply (pure (m ∪ mf)).
-    assumption.
-  - assumption.
+  specialize (H mf Hdisj) as (?&?&?&?&?&?).
+  eauto 8 using steps_step.
 Qed.
 
 Lemma post_let_step s e2 v x P:
   post (subst s v e2) P x ⊢ post (ELet s (EVal v) e2) P x.
 Proof.
-  apply post_pure_step.
-  intro m.
-  apply step_single.
-  eauto using head_step.
+  apply post_pure_step. intro m.
+  eauto using post_pure_step, step_single, head_step.
 Qed.
 
-Lemma post_seq e1 e2 P w v:
+Lemma post_seqS e1 e2 P w v:
   post e2 (post e1 P (Some w)) v ⊢ post (ESeq e1 e2) P v.
 Proof.
   intros m H.
-  rewrite <- fill_seq.
-  eapply post_ctx.
-  simpl fill.
+  rewrite <-fill_seq.
+  eapply post_ctxS.
+  simpl.
   intros mf Hdisj.
   destruct (H mf) as (m' &e' & H' & Hdisj' & Hsteps & Hval); auto.
   eauto 8 with astep.
 Qed.
 
-Lemma post_seq' e1 e2 P:
+Lemma post_seqN e1 e2 P:
   post e1 P None ⊢ post (ESeq e1 e2) P None.
 Proof.
   intros m H.
   rewrite <- fill_seq.
-  apply post_ctx'.
+  apply post_ctxN.
   assumption.
 Qed.
 
@@ -496,7 +449,7 @@ Lemma post_if_true t e1 e2 P v:
 Proof.
   intros m H.
   rewrite <- fill_if.
-  eapply post_ctx.
+  eapply post_ctxS.
   simpl fill.
   intros mf Hdisj.
   specialize (H mf) as (m' & e' & H' & Hdisj' & Hsteps & H);
@@ -508,7 +461,7 @@ Lemma post_if_false t e1 e2 P v:
 Proof.
   intros m H.
   rewrite <- fill_if.
-  eapply post_ctx.
+  eapply post_ctxS.
   simpl fill.
   intros mf Hdisj.
   specialize (H mf) as (m' & e' & H' & Hdisj' & Hsteps & H);
@@ -525,15 +478,19 @@ Proof.
   eauto 8 with astep.
 Qed.
 
-
-(* as the binary operations we have are all pure we don't care about the state of the heap
-   but only when we sum values instead of expression *)
 Lemma post_op op v1 v2 v P:
   eval_bin_op op v1 v2 = Some v →
   P ⊢ post (EOp op (EVal v1) (EVal v2)) P (Some v).
 Proof.
   intros Hop m HP mf Hdisj.
   repeat eexists; eauto with astep.
+Qed.
+
+Lemma post_amb P n :
+  P ⊢ post EAmb P (Some (VNat n)).
+Proof.
+  intros ????. eexists _,_. split_and!; simpl; eauto.
+  eauto with astep.
 Qed.
 
 Lemma post_error P :
@@ -550,34 +507,22 @@ Proof.
   eauto using steps_step, steps_refl.
 Qed.
 
-Lemma post_alloc l v:
-  l ↦ v ⊢ post (EAlloc (EVal v)) (λ m, m !! l = None) (Some (VLoc l)).
+Lemma post_alloc1 v l :
+  l ↦ v ⊢ post (EAlloc (EVal v)) emp (Some (VLoc l)).
 Proof.
-  intros m H mf Hdisj.
-  exists (delete l m), (EVal (VLoc l)).
-  split.
-  solve_map_disjoint.
-  simpl_map. split. auto.
-  split.
-  - apply step_once.
-    unfold iPoints in H.
-    subst m.
-    rewrite delete_singleton.
-    rewrite <- insert_union_singleton_l.
-    rewrite left_id_L.
-    apply step_alloc.
-    unfold valid_alloc.
-    intros e H0.
-    exfalso.
-    eapply map_disjoint_spec.
-    eassumption.
-    apply lookup_singleton.
-    eassumption.
-  - simpl.
-    reflexivity.
+  iUnfold.
+  intros ?->. eexists _,_.
+  split_and!;[|done|..|done].
+  + solve_map_disjoint.
+  + rewrite left_id_L. apply step_once.
+    apply step_single.
+    rewrite -insert_union_singleton_l.
+    constructor. intros ??HH.
+    specialize (H l). revert H.
+    rewrite HH lookup_singleton //.
 Qed.
 
-Lemma post_alloc' l v:
+Lemma post_alloc2 l v:
   l ↦ v ⊢ post (EAlloc (EVal v)) (l ↦ ⊥) (Some (VLoc l)).
 Proof.
   intros m H mf Hdisj.
@@ -600,38 +545,7 @@ Proof.
     destruct (mf !! l); simpl in *; simplify_eq; eauto.
 Qed.
 
-Lemma post_alloc'' v l :
-  l ↦ v ⊢ post (EAlloc (EVal v)) emp (Some (VLoc l)).
-Proof.
-  iUnfold.
-  intros ?->. eexists _,_.
-  split_and!;[|done|..|done].
-  + solve_map_disjoint.
-  + rewrite left_id_L. apply step_once.
-    apply step_single.
-    rewrite -insert_union_singleton_l.
-    constructor. intros ??HH.
-    specialize (H l). revert H.
-    rewrite HH lookup_singleton //.
-Qed.
-
-Lemma post_alloc''' v :
-  (Ex l, l ↦ v) ⊢ (Ex l, post (EAlloc (EVal v)) emp (Some (VLoc l))).
-Proof.
-  iUnfold.
-  intros. destruct H. subst.
-  eexists. intros ??. eexists _,_.
-  split_and!;[|done|..|done].
-  + solve_map_disjoint.
-  + rewrite left_id_L. apply step_once.
-    apply step_single.
-    rewrite -insert_union_singleton_l.
-    constructor. intros ??HH.
-    specialize (H x). revert H.
-    rewrite HH lookup_singleton //.
-Qed.
-
-Lemma post_free l v:
+Lemma post_freeS l v:
   l ↦ ⊥ ⊢ post (EFree (EVal (VLoc l))) (l ↦ v) (Some VUnit).
 Proof.
   intros m H mf Hdisj.
@@ -643,13 +557,8 @@ Proof.
   apply lookup_union_Some_l, lookup_insert.
 Qed.
 
-Lemma post_free_err l:
-  iUnallocated l ⊢ post (EFree (EVal (VLoc l))) (iUnallocated l) None.
-Proof.
-Admitted.
-
-Lemma post_double_free l:
-  iNegPoints l  ⊢ post (EFree (EVal (VLoc l))) (l ↦ ⊥) None.
+Lemma post_freeN l:
+  iNegPoints l ⊢ post (EFree (EVal (VLoc l))) (l ↦ ⊥) None.
 Proof.
   intros m H mf Hdisj.
   eexists _,_.
@@ -663,7 +572,7 @@ Proof.
     rewrite lookup_singleton in Hdisj. by asimpl.
 Qed.
 
-Lemma post_load l v:
+Lemma post_loadS l v:
   l ↦ v ⊢ post (ELoad (EVal (VLoc l))) (l ↦ v) (Some v).
 Proof.
   intros m H mf Hdisj.
@@ -673,12 +582,7 @@ Proof.
   apply step_once, step_load, lookup_union_Some_l, lookup_singleton.
 Qed.
 
-Lemma post_load_err l:
-  iUnallocated l ⊢ post (ELoad (EVal (VLoc l))) (iUnallocated l) None.
-Proof.
-Admitted.
-
-Lemma post_load_after_free l:
+Lemma post_loadN l:
   iNegPoints l ⊢ post (ELoad (EVal (VLoc l))) (iNegPoints l) None.
 Proof.
   intros m H mf Hdisj.
@@ -693,7 +597,7 @@ Proof.
     rewrite lookup_singleton in Hdisj. by asimpl.
 Qed.
 
-Lemma post_store l v v':
+Lemma post_storeS l v v':
   (l ↦ v') ⊢ post (EStore (EVal (VLoc l)) (EVal v')) (l ↦ v) (Some VUnit).
 Proof.
   intros m H mf Hdisj.
@@ -703,16 +607,10 @@ Proof.
   + solve_map_disjoint.
   + eapply step_once. apply step_single.
     erewrite <-(insert_singleton _ _ (Value v')), <-insert_union_l.
-    econstructor.
-    apply lookup_union_Some_l, lookup_singleton.
+    econstructor. apply lookup_union_Some_l, lookup_singleton.
 Qed.
 
-Lemma post_store_err l v:
-  (iUnallocated l) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (iUnallocated l) None.
-Proof.
-Admitted.
-
-Lemma post_store_after_free l v:
+Lemma post_storeN l v:
   (l ↦ ⊥) ⊢ post (EStore (EVal (VLoc l)) (EVal v)) (l ↦ ⊥) None.
 Proof.
   intros m H mf Hdisj.
@@ -739,15 +637,55 @@ Definition hoare_err (P Q : iProp) (e : expr) : Prop :=
   Q ⊢ (post e P None).
 
 Lemma hoare_alloc1 v :
-  hoare emp (EAlloc (EVal v)) (λ l, Ex n, ⌜ l = VLoc n ⌝ ∗ n ↦ v).
+  hoare emp (EAlloc (EVal v)) (λ r, Ex l, ⌜ r = VLoc l ⌝ ∗ l ↦ v).
 Proof.
   intros v'.
   eapply iExist_elim.
-  intros n.
+  intros l.
   eapply iPure_elim.
   intros ->.
-  eapply post_alloc''.
+  eapply post_alloc1.
 Qed.
+
+Lemma hoare_alloc2 l v :
+  hoare (l ↦ ⊥) (EAlloc (EVal v)) (λ r, ⌜ r = VLoc l ⌝ ∗ l ↦ v).
+Proof.
+  intros v'.
+  eapply iPure_elim.
+  intros ->.
+  eapply post_alloc2.
+Qed.
+
+Lemma hoare_amb n :
+  hoare emp EAmb (λ v, ⌜ v = VNat n ⌝).
+Proof.
+  intros v.
+  eapply iPure_elim'.
+  intros ->.
+  eapply post_amb.
+Qed.
+
+Lemma hoare_let : True. Proof. done. Qed.
+Lemma hoare_while : True. Proof. done. Qed.
+Lemma hoare_seqS : True. Proof. done. Qed.
+Lemma hoare_seqN : True. Proof. done. Qed.
+Lemma hoare_cons : True. Proof. done. Qed.
+Lemma hoare_error : True. Proof. done. Qed.
+Lemma hoare_disj : True. Proof. done. Qed.
+Lemma hoare_frame : True. Proof. done. Qed.
+Lemma hoare_freeS : True. Proof. done. Qed.
+Lemma hoare_freeN : True. Proof. done. Qed.
+Lemma hoare_loadS : True. Proof. done. Qed.
+Lemma hoare_loadN : True. Proof. done. Qed.
+Lemma hoare_storeS : True. Proof. done. Qed.
+Lemma hoare_storeN : True. Proof. done. Qed.
+Lemma hoare_op : True. Proof. done. Qed.
+Lemma hoare_pure_step : True. Proof. done. Qed.
+Lemma hoare_val : True. Proof. done. Qed.
+Lemma hoare_ctxS : True. Proof. done. Qed.
+Lemma hoare_ctxN : True. Proof. done. Qed.
+Lemma hoare_if_true : True. Proof. done. Qed.
+Lemma hoare_if_false : True. Proof. done. Qed.
 
 (* this is about evaluation of pure expressions *)
 
