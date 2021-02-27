@@ -659,13 +659,21 @@ Proof.
   eapply post_amb.
 Qed.
 
+Lemma hoare_disj P1 P2 Q1 Q2 e :
+  hoare P1 e Q1 -> hoare P2 e Q2 -> hoare (P1 ∨ P2) e (λ v, Q1 v ∨ Q2 v).
+Proof.
+  intros H1 H2 v. specialize (H1 v). specialize (H2 v).
+  eapply iOr_elim.
+  + eapply post_mono. eapply iOr_intro_l. done.
+  + eapply post_mono. eapply iOr_intro_r. done.
+Qed.
+
 Lemma hoare_let : True. Proof. done. Qed.
 Lemma hoare_while : True. Proof. done. Qed.
 Lemma hoare_seqS : True. Proof. done. Qed.
 Lemma hoare_seqN : True. Proof. done. Qed.
 Lemma hoare_cons : True. Proof. done. Qed.
 Lemma hoare_error : True. Proof. done. Qed.
-Lemma hoare_disj : True. Proof. done. Qed.
 Lemma hoare_exists : True. Proof. done. Qed.
 Lemma hoare_frame : True. Proof. done. Qed.
 Lemma hoare_freeS : True. Proof. done. Qed.
