@@ -286,10 +286,10 @@ Proof. duh. Qed.
 Lemma iForall_elim {A} (P : A → iProp) x : (All z, P z) ⊢ P x.
 
 Proof. duh. Qed.
-Lemma iExist_intro {A} (P : A → iProp) x : P x ⊢ Ex z, P z.
+Lemma iExists_intro {A} (P : A → iProp) x : P x ⊢ Ex z, P z.
 Proof. duh. Qed.
 
-Lemma iExist_elim {A} (P : A → iProp) Q :  (∀ x, P x ⊢ Q) → (Ex z, P z) ⊢ Q.
+Lemma iExists_elim {A} (P : A → iProp) Q :  (∀ x, P x ⊢ Q) → (Ex z, P z) ⊢ Q.
 Proof. duh. Qed.
 
 Lemma iSep_emp_r P : P ⊢ P ∗ emp.
@@ -361,12 +361,6 @@ Lemma post_mono P R Q e v:
   (P ⊢ Q) → (R ⊢ post e P v) → (R ⊢ post e Q v).
 Proof.
   intros ??HP????. edestruct HP; naive_solver.
-Qed.
-
-Lemma post_disj P Q R e v:
-  (R ⊢ post e P v) → (R ⊢ post e Q v) → (R ⊢ post e (P ∨ Q) v).
-Proof.
-  intros HP?????. edestruct HP; naive_solver (by apply iOr_intro_l).
 Qed.
 
 Lemma post_frame P Q e v :
@@ -640,7 +634,7 @@ Lemma hoare_alloc1 v :
   hoare emp (EAlloc (EVal v)) (λ r, Ex l, ⌜ r = VLoc l ⌝ ∗ l ↦ v).
 Proof.
   intros v'.
-  eapply iExist_elim.
+  eapply iExists_elim.
   intros l.
   eapply iPure_elim.
   intros ->.
@@ -672,6 +666,7 @@ Lemma hoare_seqN : True. Proof. done. Qed.
 Lemma hoare_cons : True. Proof. done. Qed.
 Lemma hoare_error : True. Proof. done. Qed.
 Lemma hoare_disj : True. Proof. done. Qed.
+Lemma hoare_exists : True. Proof. done. Qed.
 Lemma hoare_frame : True. Proof. done. Qed.
 Lemma hoare_freeS : True. Proof. done. Qed.
 Lemma hoare_freeN : True. Proof. done. Qed.
