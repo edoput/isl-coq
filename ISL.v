@@ -137,9 +137,79 @@ Section seplogic.
 End seplogic.
 
 
+Lemma head_step_frame_equiv e m e' m' :
+  head_step e m e' m' <-> ∀ mf, m' ##ₘ mf -> head_step e (m ∪ mf) e' (m' ∪ mf).
+Proof.
+  split.
+  - intros. destruct H; rewrite -?insert_union_l; try econstructor; eauto;
+    try apply lookup_union_Some_l; eauto.
+    intros ??. apply H.
+    rewrite lookup_union in H1.
+    assert (mf !! l = None) by solve_map_disjoint.
+    rewrite H2 in H1.
+    destruct (m !! l); by asimpl.
+  - intros. specialize (H ∅). rewrite !right_id in H.
+    apply H. solve_map_disjoint.
+Qed.
+
+Lemma step_frame_equiv e m e' m' :
+  step e m e' m' <-> ∀ mf, m' ##ₘ mf -> step e (m ∪ mf) e' (m' ∪ mf).
+Proof.
+  split.
+  - intros []. rewrite ->head_step_frame_equiv in H.
+    eauto using step.
+  - intros. specialize (H _ (map_disjoint_empty_r _)).
+    by rewrite !right_id_L in H.
+Qed.
+
+Lemma step_heap_mono e m e' m' x :
+  step e m e' m' -> m' ##ₘ x -> m ##ₘ x.
+Proof.
+  intros []?. destruct H; solve_map_disjoint.
+Qed.
+
+Lemma steps_heap_mono e m e' m' x :
+  steps e m e' m' -> m' ##ₘ x -> m ##ₘ x.
+Proof.
+  induction 1; eauto using step_heap_mono.
+Qed.
+
+Lemma steps_frame_equiv e m e' m' :
+  steps e m e' m' <-> ∀ mf, m' ##ₘ mf -> steps e (m ∪ mf) e' (m' ∪ mf).
+Proof.
+  split.
+  - induction 1; eauto using steps.
+    intros.
+    assert (m2 ##ₘ mf). { eapply steps_heap_mono; eauto. }
+    rewrite ->step_frame_equiv in H.
+    eapply steps_step; eauto.
+  - intros. specialize (H _ (map_disjoint_empty_r _)).
+    by rewrite !right_id_L in H.
+Qed.
 
 Definition post (e : expr) (P : iProp) (v : option val) : iProp :=
   λ m', ∀ mf, m' ##ₘ mf → (∃ m e', m ##ₘ mf ∧ P m ∧ steps e (m ∪ mf) e' (m' ∪ mf) ∧ is_error_or_val v e' (m' ∪ mf)).
+
+Definition post' (e : expr) (P : iProp) (v : option val) : iProp :=
+  λ m', ∃ m e', P m ∧ steps e m e' m' ∧ is_error_or_val v e' m'.
+
+Lemma post_post' e P v m' :
+  post e P v m' <-> post' e P v m'.
+Proof.
+  split.
+  - intros ?. specialize (H ∅).
+    edestruct H as (? & ? & ? & ? & ? & ?); first solve_map_disjoint.
+    rewrite !right_id_L in H2,H3.
+    eexists _,_; eauto.
+  - intros ???. edestruct H as (? & ? & ? & ? & ?).
+    eexists _,_. split_and!;[|done|..];eauto using steps_heap_mono.
+    rewrite ->steps_frame_equiv in H2. eauto.
+    destruct v; simpl in *; eauto. unfold is_error in *.
+    destruct H3. split; eauto.
+    intros ???. eapply H4.
+    (* Theorem is false for v = None!!! *)
+Abort.
+
 
 Section primitive_post_rules.
 
