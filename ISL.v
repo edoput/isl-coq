@@ -206,11 +206,6 @@ Section primitive_post_rules.
     repeat eexists; eauto using steps.
   Qed.
 
-  Lemma post_error P :
-    P ⊢ post EError P None.
-  Proof.
-  Admitted.
-
   Lemma post_alloc1 v l :
     l ↦ v ⊢ post (EAlloc (EVal v)) emp (Some (VLoc l)).
   Proof.
