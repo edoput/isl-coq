@@ -487,12 +487,24 @@ Proof.
   eauto with astep.
 Qed.
 
+Definition no_step e := ¬ is_val e ∧ ∀ e' m m', ¬ step e m e' m'.
+
+Lemma post_no_step P e :
+  no_step e -> P ⊢ post e P None.
+Proof.
+  intros [] m Pm mf Hdisj.
+  repeat eexists; eauto using steps.
+Qed.
+
+Lemma no_step_EError : no_step EError.
+Proof.
+  split; eauto using step_error.
+Qed.
+
 Lemma post_error P :
   P ⊢ post EError P None.
 Proof.
-  iUnfold.
-  intros m Hp mf Hdisj.
-  repeat eexists; eauto 10 using step_error with astep.
+  eapply post_no_step, no_step_EError.
 Qed.
 
 Lemma step_once e1 e2 h1 h2 :
