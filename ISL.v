@@ -210,8 +210,8 @@ Definition iOwn (m : mem) : iProp := λ m', m' = m.
 
 Notation "P ⊢ Q" := (iEntails P Q) (at level 99, Q at level 200).
 Notation "P ∗ Q" := (iSep P Q) (at level 80, right associativity).
-Notation "P ∧ Q" := (iAnd P Q) (at level 80, right associativity).
-Notation "P ∨ Q" := (iOr P Q) (at level 85, right associativity).
+Notation "P ∧_ Q" := (iAnd P Q) (at level 80, right associativity).
+Notation "P ∨_ Q" := (iOr P Q) (at level 85, right associativity).
 Notation "l ↦ v" := (iPoints l v) (at level 20).
 Notation "l ↦ ⊥" := (iNegPoints l) (at level 20).
 Notation "'emp'" := iEmp.
@@ -262,22 +262,22 @@ Proof. duh. Qed.
 Lemma iWand_elim P Q : P ∗ (P -∗ Q) ⊢ Q.
 Proof. duh. Qed.
 
-Lemma iAnd_intro (P Q R : iProp) : (R ⊢ P) → (R ⊢ Q) → R ⊢ P ∧ Q.
+Lemma iAnd_intro (P Q R : iProp) : (R ⊢ P) → (R ⊢ Q) → R ⊢ P ∧_ Q.
 Proof. duh. Qed.
 
-Lemma iAnd_elim_l (P Q : iProp) : P ∧ Q ⊢ P.
+Lemma iAnd_elim_l (P Q : iProp) : P ∧_ Q ⊢ P.
 Proof. duh. Qed.
 
-Lemma iAnd_elim_r (P Q : iProp) : P ∧ Q ⊢ Q.
+Lemma iAnd_elim_r (P Q : iProp) : P ∧_ Q ⊢ Q.
 Proof. duh. Qed.
 
-Lemma iOr_intro_l (P Q : iProp) : P ⊢ P ∨ Q.
+Lemma iOr_intro_l (P Q : iProp) : P ⊢ P ∨_ Q.
 Proof. duh. Qed.
 
-Lemma iOr_intro_r (P Q : iProp) : Q ⊢ P ∨ Q.
+Lemma iOr_intro_r (P Q : iProp) : Q ⊢ P ∨_ Q.
 Proof. duh. Qed.
 
-Lemma iOr_elim (P Q R : iProp) : (P ⊢ R) → (Q ⊢ R) → P ∨ Q ⊢ R.
+Lemma iOr_elim (P Q R : iProp) : (P ⊢ R) → (Q ⊢ R) → P ∨_ Q ⊢ R.
 Proof. duh. Qed.
 
 Lemma iForall_intro {A} P (Q : A → iProp) : (∀ x, P ⊢ Q x) → (P ⊢ All x, Q x).
@@ -627,8 +627,28 @@ Qed.
 Definition hoare (P : iProp) (e : expr) (Q : val -> iProp) : Prop :=
   ∀ v, (Q v) ⊢ (post e P (Some v)).
 
-Definition hoare_err (P Q : iProp) (e : expr) : Prop :=
+Definition hoare_err (P : iProp) (e : expr) (Q : iProp) : Prop :=
   Q ⊢ (post e P None).
+
+Definition hoare' (P : iProp) (e : expr) (Q : val -> iProp) : Prop :=
+  ∀ v m', Q v m' -> ∃ (m : mem) e', P m ∧ steps e m e' m' ∧ is_error_or_val (Some v) e' m'.
+
+Lemma hoare_hoare' P e Q :
+  hoare P e Q -> hoare' P e Q.
+Proof.
+  intros H???. edestruct H as (?&?&?&?&?&?);[eauto|apply map_disjoint_empty_r|].
+  eexists _,_. rewrite !right_id_L in H3. split_and!; eauto.
+Qed.
+
+Definition hoare_err' (P : iProp) (e : expr) (Q : iProp) : Prop :=
+  ∀ m', Q m' -> ∃ (m : mem) e', P m ∧ steps e m e' m' ∧ is_error_or_val None e' m'.
+
+Lemma hoare_err_hoare_err' P e Q :
+  hoare_err P e Q -> hoare_err' P e Q.
+Proof.
+  intros H??. edestruct H as (?&?&?&?&?&?);[eauto|apply map_disjoint_empty_r|].
+  eexists _,_. rewrite !right_id_L in H3,H4. split_and!; eauto.
+Qed.
 
 Lemma hoare_alloc1 v :
   hoare emp (EAlloc (EVal v)) (λ r, Ex l, ⌜ r = VLoc l ⌝ ∗ l ↦ v).
@@ -662,10 +682,17 @@ Qed.
 Lemma hoare_disj P1 P2 Q1 Q2 e :
   hoare P1 e Q1 -> hoare P2 e Q2 -> hoare (P1 ∨ P2) e (λ v, Q1 v ∨ Q2 v).
 Proof.
+  unfold hoare.
   intros H1 H2 v. specialize (H1 v). specialize (H2 v).
   eapply iOr_elim.
   + eapply post_mono. eapply iOr_intro_l. done.
   + eapply post_mono. eapply iOr_intro_r. done.
+Qed.
+
+Lemma hoare_exists {A} (P : A -> iProp) Q e :
+  (∀ x, hoare (P x) e (λ v, Q x v)) -> hoare (Ex x, P x) e (λ v, Ex x, Q x v).
+Proof.
+  unfold hoare. eauto using post_mono, iExists_intro, iExists_elim.
 Qed.
 
 Lemma hoare_let : True. Proof. done. Qed.
