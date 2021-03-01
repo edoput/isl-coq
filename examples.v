@@ -192,3 +192,56 @@ Proof.
       inversion H1.
     + destruct c; simpl in *; discriminate || auto.
 Qed.
+
+(* finally we can now start messing around with our definitions
+   and prove that some expressions will error *)
+
+   Example simple_error := is_error EError ∅.
+
+   Lemma our_first_error : simple_error.
+   Proof.
+     unfold simple_error.
+     split.
+     - auto.
+     - intros.
+       unfold not.
+       intro.
+       (* now we got a proof of head_step for an expression EError
+          which is not a thing in our operational semantic; the contradiction
+          must come from there.
+        *)
+       inversion H.
+       (* the inversion left us with an _unknown_ context E to work with
+          but we still have the restriction that fill E e1 = EError; this
+          only makes sense when E = [] and e1 = EError *)
+       destruct E.
+       * simpl in *; subst; inversion H1.
+       * destruct c; simpl in *; discriminate.
+   Qed.
+
+   (* and we can get errors also from using resources wrongly *)
+
+   Lemma resource_error l: is_error (EFree (EVal (VLoc l))) ∅.
+   Proof.
+     split; [auto|].
+     intros ???H.
+     erewrite step_free_inv in H.
+     destruct H as (v & _ & lookup & _).
+     rewrite lookup_empty in lookup.
+     discriminate.
+   Qed.
+
+   Definition amb_bool := (EOp EqOp EAmb (EVal (VNat 0))).
+
+(* and finally prove that we can always get any two booleans *)
+Lemma amb_is_ambiguous (b : bool) (m : mem) : steps amb_bool m (EVal (VBool b)) m.
+Proof.
+  unfold amb_bool.
+  eapply steps_step.
+  rewrite <- fill_op_l.
+  constructor.
+  apply (Amb_headstep m (if b then 0 else 1)).
+  rewrite fill_op_l.
+  apply steps_single.
+  destruct b; eauto using head_step.
+Qed.

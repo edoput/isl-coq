@@ -358,6 +358,12 @@ Inductive steps : expr → mem → expr → mem → Prop :=
      steps e2 m2 e3 m3 →
      steps e1 m1 e3 m3.
 
+Lemma step_once e1 e2 h1 h2 :
+  step e1 h1 e2 h2 -> steps e1 h1 e2 h2.
+Proof.
+  eauto using steps_step, steps_refl.
+Qed.
+
 (* It did not make sense to have this as a constructor of _steps_
    but having it is a _quality of life improvement_. *)
 Lemma steps_single e e' m m' : head_step e m e' m' → steps e m e' m'.
@@ -518,4 +524,79 @@ Proof.
   eassumption.
   rewrite fill_store_r.
   eauto using steps_single with head_step.
+Qed.
+
+
+Definition is_val e :=
+  match e with
+  | EVal _ => true
+  | _ => false
+  end.
+
+(* our expression is an error when we cannot step anymore in the reduction *)
+Definition is_error e h := not (is_val e) ∧ ∀ e' h', not (step e h e' h').
+
+(* to unify the two definitions of wp/ewp later on we rely on this new predicate *)
+Definition is_error_or_val (v : option val) (e : expr) (m : mem): Prop :=
+  match v with
+  | None => is_error e m
+  | Some v => e = EVal v
+end.
+
+(* is_error relies on _step_ to say that an expression does not step
+   but we only have an operational semantic for not stepping that works
+   on head_step instead.
+
+   This section is about lifting this idea of non stepping to expressions
+   reducing in contexes.
+*)
+
+Lemma head_step_fill_item_val a e e' h h' :
+  head_step (fill_item a e) h e' h' → is_val e.
+Proof.
+  destruct a; simpl; intros H; inversion H; done.
+Qed.
+
+Lemma fill_item_eq_val a1 a2 e1 e2 :
+  fill_item a1 e1 = fill_item a2 e2 →
+  e1 = e2 ∨ is_val e1 ∨ is_val e2.
+Proof.
+  destruct a1,a2; simpl; intro; simplify_eq; eauto.
+Qed.
+
+Lemma head_step_not_val e1 e2 h1 h2 :
+  head_step e1 e2 h1 h2 → is_val e1 → False.
+Proof.
+  intros Hs?. by inversion Hs; subst.
+Qed.
+
+Lemma is_val_fill e E :
+  is_val (fill E e) → is_val e.
+Proof.
+  destruct E; eauto. by destruct c.
+Qed.
+
+Lemma fill_item_not_val e a :
+  ¬ is_val (fill_item a e).
+Proof.
+  destruct a; eauto.
+Qed.
+
+Lemma is_error_fill_item e h a :
+  is_error e h → is_error (fill_item a e) h.
+Proof.
+  intros [Hv Hs].
+  split; eauto using fill_item_not_val.
+  intros e' h' H. inversion H. clear H. subst.
+  induction E; simpl in *. subst.
+  - eauto using head_step_fill_item_val.
+  - apply fill_item_eq_val in H0 as [|[]];
+    eauto using is_val_fill, head_step_not_val.
+    subst. eapply Hs. constructor. done.
+Qed.
+
+Lemma is_error_fill e h E :
+  is_error e h → is_error (fill E e) h.
+Proof.
+  induction E; simpl; eauto using is_error_fill_item.
 Qed.
