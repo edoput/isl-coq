@@ -400,6 +400,7 @@ Section derived_post_rules.
 
   Lemma pure_step_amb n : pure_step EAmb (EVal $ VNat n).
   Proof.
+    intro. eauto with astep.
   Admitted.
 
   Lemma post_amb P n :
@@ -454,6 +455,16 @@ Section hoare.
   Proof.
     intros H??. edestruct H as (?&?&?&?&?&?);[eauto|apply map_disjoint_empty_r|].
     eexists _,_. rewrite !right_id_L in H3,H4. split_and!; eauto.
+  Qed.
+
+  Definition hoare_alt (P : iProp) (e : expr) (v : val) (Q : iProp) : Prop :=
+    Q ⊢ (post e P (Some v)).
+
+  (* Doing the rules in this style would work too, and maybe that's indeed nicer *)
+  Lemma hoare_alloc1_alt l v :
+    hoare_alt emp%S (EAlloc (EVal v)) (VLoc l) (l ↦ v)%S.
+  Proof.
+    eapply post_alloc1.
   Qed.
 
   Lemma hoare_alloc1 v :
