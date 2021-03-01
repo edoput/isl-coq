@@ -8,7 +8,6 @@ Definition iProp := mem → Prop.
 Definition iEntails (P Q : iProp) : Prop := ∀ m, P m → Q m.
 Definition iEmp : iProp := λ m, m = ∅.
 Definition iPoints (l : nat) (v : val) : iProp := λ m, m = {[ l := (Value v) ]}.
-Definition iUnallocated (l : nat) : iProp := λ m, m !! l = None.
 Definition iNegPoints (l : nat) : iProp := λ m, m = {[ l := Reserved ]}.
 Definition iSep (P Q : iProp) : iProp := λ m, ∃ m1 m2, P m1 ∧ Q m2 ∧ m = m1 ∪ m2 ∧ m1 ##ₘ m2 .
 Definition iWand (P Q : iProp) : iProp := λ m, ∀ m', m ##ₘ m' → P m' → Q (m' ∪ m).
