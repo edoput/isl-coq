@@ -137,10 +137,12 @@ Section seplogic.
 
 End seplogic.
 
-Section primitive_post_rules.
 
-  Definition post (e : expr) (P : iProp) (v : option val) : iProp :=
-    λ m', ∀ mf, m' ##ₘ mf → (∃ m e', m ##ₘ mf ∧ P m ∧ steps e (m ∪ mf) e' (m' ∪ mf) ∧ is_error_or_val v e' (m' ∪ mf)).
+
+Definition post (e : expr) (P : iProp) (v : option val) : iProp :=
+  λ m', ∀ mf, m' ##ₘ mf → (∃ m e', m ##ₘ mf ∧ P m ∧ steps e (m ∪ mf) e' (m' ∪ mf) ∧ is_error_or_val v e' (m' ∪ mf)).
+
+Section primitive_post_rules.
 
   Lemma post_mono P R Q e v:
     (P ⊢ Q) → (R ⊢ post e P v) → (R ⊢ post e Q v).
