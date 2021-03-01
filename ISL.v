@@ -206,16 +206,10 @@ Section primitive_post_rules.
     repeat eexists; eauto using steps.
   Qed.
 
-  Lemma no_step_EError : no_step EError.
-  Proof.
-    split; eauto using step_error.
-  Qed.
-
   Lemma post_error P :
     P ⊢ post EError P None.
   Proof.
-    eapply post_no_step, no_step_EError.
-  Qed.
+  Admitted.
 
   Lemma post_alloc1 v l :
     l ↦ v ⊢ post (EAlloc (EVal v)) emp (Some (VLoc l)).
@@ -409,11 +403,19 @@ Section derived_post_rules.
     repeat eexists; eauto with astep.
   Qed.
 
+  Lemma pure_step_amb n : pure_step EAmb (EVal $ VNat n).
+  Proof.
+  Admitted.
+
   Lemma post_amb P n :
     P ⊢ post EAmb P (Some (VNat n)).
   Proof.
-    intros ????. eexists _,_. split_and!; simpl; eauto.
-    eauto with astep.
+    (* Prove in terms of pure_step_amb, post_pure_step, post_val *)
+  Admitted.
+
+  Lemma no_step_EError : no_step EError.
+  Proof.
+    split; eauto using step_error.
   Qed.
 
 End derived_post_rules.
@@ -460,7 +462,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_alloc1 v :
-    {{ emp }} (EAlloc (EVal v)) {{ r, ∃ l, ⌜ r = VLoc l ⌝  ∗ l ↦ v }}.
+    {{ emp }} (EAlloc (EVal v)) {{ r, ∃ l, ⌜ r = VLoc l ⌝ ∗ l ↦ v }}.
   Proof.
     intros v'.
     eapply iExists_elim.
@@ -488,6 +490,22 @@ Section hoare.
     eapply post_amb.
   Qed.
 
+  Lemma hoare_amb' :
+    {{ emp }} EAmb {{ v, ∃ n, ⌜ v = VNat n ⌝ }}.
+  Proof.
+    intros v.
+    eapply iExists_elim.
+    intros x.
+    eapply iPure_elim'.
+    intros ->.
+    eapply post_amb.
+  Qed.
+
+  Lemma hoare_exists {A} P (Q : A -> val -> iProp) e :
+    {{ P }} e {{ v, ∃ x, Q x v }} <-> ∀ x, {{ P }} e {{ v, Q x v }}.
+  Proof.
+  Admitted.
+
   Lemma hoare_disj P1 P2 Q1 Q2 e :
     {{ P1 }} e {{ v, Q1 v }} ->
     {{ P2 }} e {{ v, Q2 v }} ->
@@ -500,21 +518,11 @@ Section hoare.
     + eapply post_mono. eapply iOr_intro_r. done.
   Qed.
 
-  Lemma hoare_exists {A} (P : A -> iProp) Q e :
-    (∀ x, {{ (P x) }} e {{ v, Q x v }}) -> {{ ∃ x, P x }} e {{ v, ∃ x, Q x v }}.
-  Proof.
-    unfold hoare. eauto using post_mono, iExists_intro, iExists_elim.
-  Qed.
-
-  Lemma hoare_error P Q :
-    {{ P }} EError {{ERR: Q }}.
+  Lemma hoare_exists_forall {A} (P : A -> iProp) Q e :
+    (∀ x, {{ (P x) }} e {{ v, Q x v }}) <-> {{ ∃ x, P x }} e {{ v, ∃ x, Q x v }}.
   Proof.
   Admitted.
 
-  Lemma hoare_let : True. Proof. done. Qed.
-  Lemma hoare_while : True. Proof. done. Qed.
-  Lemma hoare_seqS : True. Proof. done. Qed.
-  Lemma hoare_seqN : True. Proof. done. Qed.
   Lemma hoare_cons : True. Proof. done. Qed.
   Lemma hoare_frame : True. Proof. done. Qed.
   Lemma hoare_freeS : True. Proof. done. Qed.
@@ -523,13 +531,25 @@ Section hoare.
   Lemma hoare_loadN : True. Proof. done. Qed.
   Lemma hoare_storeS : True. Proof. done. Qed.
   Lemma hoare_storeN : True. Proof. done. Qed.
-  Lemma hoare_op : True. Proof. done. Qed.
-  Lemma hoare_pure_step : True. Proof. done. Qed.
   Lemma hoare_val : True. Proof. done. Qed.
   Lemma hoare_ctxS : True. Proof. done. Qed.
   Lemma hoare_ctxN : True. Proof. done. Qed.
+  Lemma hoare_pure_step : True. Proof. done. Qed.
+  Lemma hoare_no_step : True. Proof. done. Qed.
+  (* Derived rules *)
+  Lemma hoare_let : True. Proof. done. Qed.
+  Lemma hoare_while : True. Proof. done. Qed.
+  Lemma hoare_seqS : True. Proof. done. Qed.
+  Lemma hoare_seqN : True. Proof. done. Qed.
+  Lemma hoare_op : True. Proof. done. Qed.
   Lemma hoare_if_true : True. Proof. done. Qed.
   Lemma hoare_if_false : True. Proof. done. Qed.
+
+  Lemma hoare_error P Q :
+    {{ P }} EError {{ERR: Q }}.
+  Proof.
+  Admitted.
+
 
 End hoare.
 (* this is about evaluation of pure expressions *)
@@ -572,8 +592,8 @@ Plan:
 - [x] Think about combining iReaches/iError
 - [x] Delete the iReaches stuff
 - [x] Change definition of is_error to use step instead of head_step
-- [ ] Create a document with all the primitive rules that you have proved
-- [ ] Write down the intuitive meaning of the wp/ewp and entailment
+- [x] Create a document with all the primitive rules that you have proved
+- [x] Write down the intuitive meaning of the wp/ewp and entailment
         What does wp e P v mean?
         What does Q ⊢ wp e P v mean?
         (jules: reachable P e v ⊣ Q)
@@ -589,6 +609,7 @@ Plan:
 - [ ] Think about which rules can be derived from other rules, and put them in a separate section and prove them in terms of the other rules
 - [ ] Prove the examples from the paper incorrect using the post rules, and using the hoare rules
 - [ ] Write thesis
+
 - [ ] In the ISL paper can they prove this program can error
   ```
   x = alloc(3)
