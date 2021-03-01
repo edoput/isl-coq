@@ -108,13 +108,13 @@ Inductive head_step : expr → mem → expr → mem → Prop :=
      valid_alloc m l →
      head_step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[ l := (Value v) ]> m)
   | Free_headstep m l v:
-     m !! l = (Some (Value v)) →
+     m !! l = Some (Value v) →
      head_step (EFree (EVal (VLoc l))) m (EVal VUnit) (<[l := Reserved ]> m)
   | Load_headstep m l v :
-     m !! l = (Some (Value v)) →
+     m !! l = Some (Value v) →
      head_step (ELoad (EVal (VLoc l))) m (EVal v) m
   | Store_headstep m l v w:
-     m !! l = (Some (Value w)) →
+     m !! l = Some (Value w) →
      head_step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[ l := (Value v) ]> m)
   | Amb_headstep m (n : nat):
      head_step EAmb m (EVal (VNat n)) m.
