@@ -776,17 +776,21 @@ Plan:
 - [x] Prove the admitted rules for ∨ and ∧
 - [x] Refactor ewp/wp to use this option
 - [x] Define Hoare triples in terms of wp/ewp
+- [x] Think about negative points to / the two alloc rules
+- [x] Clean up the rules, delete any rules that are subsumed by the ctx rules
 - [ ] Put all the rules for the Hoare triples from the paper as lemmas in that file (Admitted)
 - [ ] Think about which additional rules for wp/ewp we need to prove all the rules in the paper using those lemmas
 - [ ] Prove all the rules in the paper using the rules for wp/ewp
-- [ ] Think about negative points to / the two alloc rules
-- [ ] Clean up the rules, delete any rules that are subsumed by the ctx rules
+- [ ] Clean up the file, remove unused definitions
+- [ ] Think about which rules can be derived from other rules, and put them in a separate section and prove them in terms of the other rules
+- [ ] Prove the examples from the paper incorrect using the post rules, and using the hoare rules
+- [ ] Write thesis
 - [ ] In the ISL paper can they prove this program can error
   ```
   x = alloc(3)
   y = alloc(3)
   if(x != y) then foo: Error
   ```
-
+- [ ] Completeness theorem (?)
 
 *)
