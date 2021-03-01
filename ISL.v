@@ -513,10 +513,10 @@ Section hoare.
     + eapply post_mono. eapply iOr_intro_r. done.
   Qed.
 
-  Lemma hoare_exists_forall {A} (P : A -> iProp) Q e :
-    (∀ x, {{ (P x) }} e {{ v, Q x v }}) <-> {{ ∃ x, P x }} e {{ v, ∃ x, Q x v }}.
+  Lemma hoare_exists_forall {A} P (Q : A -> val -> iProp) e :
+    (∀ x, {{ P }} e {{ v, Q x v }}) <-> {{ P }} e {{ v, ∃ x, Q x v }}.
   Proof.
-  Admitted.
+  Qed.
 
   Lemma hoare_cons : True. Proof. done. Qed.
   Lemma hoare_frame : True. Proof. done. Qed.
