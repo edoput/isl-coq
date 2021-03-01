@@ -551,8 +551,13 @@ Proof.
   apply lookup_union_Some_l, lookup_insert.
 Qed.
 
-Lemma post_freeN l:
-  iNegPoints l ⊢ post (EFree (EVal (VLoc l))) (l ↦ ⊥) None.
+Lemma post_free_err l:
+  iUnallocated l ⊢ post (EFree (EVal (VLoc l))) (iUnallocated l) None.
+Proof.
+Admitted.
+
+Lemma post_double_free l:
+  l ↦ ⊥ ⊢ post (EFree (EVal (VLoc l))) (l ↦ ⊥) None.
 Proof.
   intros m H mf Hdisj.
   eexists _,_.
