@@ -34,7 +34,7 @@ Notation "∃ x1 .. xn , P" :=
   (iExists (fun x1 => .. (iExists (fun xn => P%S)) ..))
   (at level 200, x1 binder, xn binder, right associativity) : S.
 
-Ltac iUnfold := unfold iEmp, iNegPoints, iUnallocated, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails, iAnd, iOr in *.
+Ltac iUnfold := unfold iEmp, iNegPoints, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails, iAnd, iOr in *.
 
 Section seplogic.
 
@@ -516,7 +516,6 @@ Section hoare.
   Lemma hoare_seqS : True. Proof. done. Qed.
   Lemma hoare_seqN : True. Proof. done. Qed.
   Lemma hoare_cons : True. Proof. done. Qed.
-  Lemma hoare_error : True. Proof. done. Qed.
   Lemma hoare_frame : True. Proof. done. Qed.
   Lemma hoare_freeS : True. Proof. done. Qed.
   Lemma hoare_freeN : True. Proof. done. Qed.
