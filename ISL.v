@@ -499,20 +499,20 @@ Section hoare.
 
 
   Definition hoare' (P : iProp) (e : expr) (Q : val -> iProp) : Prop :=
-    ∀ v m', Q v m' -> ∃ (m : mem) e', P m ∧ steps e m e' m' ∧ is_error_or_val (Some v) e' m'.
+    ∀ v m', Q v m' → ∃ (m : mem) e', P m ∧ steps e m e' m' ∧ is_error_or_val (Some v) e' m'.
 
   Lemma hoare_hoare' P e Q :
-    hoare P e Q -> hoare' P e Q.
+    hoare P e Q → hoare' P e Q.
   Proof.
     intros H???. edestruct H as (?&?&?&?&?&?);[eauto|apply map_disjoint_empty_r|].
     eexists _,_. rewrite !right_id_L in H3. split_and!; eauto.
   Qed.
 
   Definition hoare_err' (P : iProp) (e : expr) (Q : iProp) : Prop :=
-    ∀ m', Q m' -> ∃ (m : mem) e', P m ∧ steps e m e' m' ∧ is_error_or_val None e' m'.
+    ∀ m', Q m' → ∃ (m : mem) e', P m ∧ steps e m e' m' ∧ is_error_or_val None e' m'.
 
   Lemma hoare_err_hoare_err' P e Q :
-    hoare_err P e Q -> hoare_err' P e Q.
+    hoare_err P e Q → hoare_err' P e Q.
   Proof.
     intros H??. edestruct H as (?&?&?&?&?&?);[eauto|apply map_disjoint_empty_r|].
     eexists _,_. rewrite !right_id_L in H3,H4. split_and!; eauto.
