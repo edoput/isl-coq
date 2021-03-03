@@ -591,8 +591,8 @@ Section hoare.
   Qed.
 
   Lemma hoare_disj P1 P2 Q1 Q2 e :
-    {{ P1 }} e {{ v, Q1 v }} ->
-    {{ P2 }} e {{ v, Q2 v }} ->
+    {{ P1 }} e {{ v, Q1 v }} →
+    {{ P2 }} e {{ v, Q2 v }} →
     {{ P1 ∨ P2 }} e {{ v, Q1 v ∨ Q2 v }}.
   Proof.
     unfold hoare.
