@@ -810,14 +810,33 @@ Section hoare.
     auto using  post_op.
   Qed.    
 
-  Lemma hoare_if_true : True. Proof. done. Qed.
-  Lemma hoare_if_false : True. Proof. done. Qed.
-
-  Lemma hoare_error P Q :
-    {{ P }} EError {{ERR: Q }}.
+  Lemma hoare_if_true P Q e1 e2:
+    {{ P }} e1 {{ r, Q }} →
+    {{ P }} EIf (EVal (VBool true)) e1 e2 {{ r, Q }}.
   Proof.
-  Admitted.
+    intro.
+    eapply hoare_pure_step.
+    intro.
+    eauto using step_single, head_step.
+    assumption.
+  Qed.
 
+  Lemma hoare_if_false P Q e1 e2:
+    {{ P }} e2 {{ r, Q }} →
+    {{ P }} EIf (EVal (VBool false)) e1 e2 {{ r, Q }}.
+  Proof.
+    intro.
+    eapply hoare_pure_step.
+    intro.
+    eauto using step_single, head_step.
+    assumption.
+  Qed.
+
+  Lemma hoare_error P:
+    {{ P }} EError {{ERR: P }}.
+  Proof.
+    eauto using hoare_no_step, no_step_EError.
+  Qed.
 
 End hoare.
 (* this is about evaluation of pure expressions *)
