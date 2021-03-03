@@ -729,7 +729,19 @@ Section hoare.
     apply post_ctxN.
   Qed.
 
-  Lemma hoare_pure_step : True. Proof. done. Qed.
+  Lemma hoare_pure_step P e e' Q:
+    pure_step e e' →
+    {{ P }} e' {{ r, Q }} →
+    {{ P }} e  {{ r, Q }}.
+  Proof.
+    intros.
+    unfold hoare in *.
+    intros.
+    eapply iEntails_trans.
+    apply H0.
+    eauto using  post_pure_step.
+  Qed.
+
   Lemma hoare_no_step : True. Proof. done. Qed.
   (* Derived rules *)
   Lemma hoare_let : True. Proof. done. Qed.
