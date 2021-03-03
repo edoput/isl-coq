@@ -679,8 +679,22 @@ Section hoare.
     apply post_loadN.
   Qed.
 
-  Lemma hoare_storeS : True. Proof. done. Qed.
-  Lemma hoare_storeN : True. Proof. done. Qed.
+  Lemma hoare_storeS l v v':
+    {{ l ↦ v}} EStore (EVal (VLoc l)) (EVal v') {{ r, ⌜ r = VUnit ⌝ ∗ l ↦ v' }}.
+  Proof.
+    unfold hoare.
+    intros.
+    apply iPure_elim.
+    intros ->.
+    apply post_storeS.
+  Qed.
+
+  Lemma hoare_storeN l v:
+    {{ l ↦ ⊥ }} EStore (EVal (VLoc l)) (EVal v) {{ERR: l ↦ ⊥ }}.
+  Proof.
+    apply post_storeN.
+  Qed.
+
   Lemma hoare_val : True. Proof. done. Qed.
   Lemma hoare_ctxS : True. Proof. done. Qed.
   Lemma hoare_ctxN : True. Proof. done. Qed.
