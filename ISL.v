@@ -617,7 +617,24 @@ Section hoare.
       eassumption.
   Qed.
 
-  Lemma hoare_cons : True. Proof. done. Qed.
+  Lemma hoare_cons (P P': iProp) e (Q Q' : val → iProp) :
+    (P ⊢ P') →
+    (∀ v, (Q' v) ⊢ (Q v)) →
+    {{ P }} e {{ v, Q v }} →
+    {{ P' }} e {{ v, Q' v }}.
+  Proof.
+    intros.
+    intro v.
+    specialize (H0 v).
+    eapply iEntails_trans.
+    eassumption.
+    eapply iEntails_trans.
+    apply H1.
+    eapply post_mono.
+    eassumption.
+    apply iEntails_refl.
+  Qed.
+
   Lemma hoare_frame : True. Proof. done. Qed.
   Lemma hoare_freeS : True. Proof. done. Qed.
   Lemma hoare_freeN : True. Proof. done. Qed.
