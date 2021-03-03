@@ -408,13 +408,11 @@ Section derived_post_rules.
   Lemma post_seqS e1 e2 P w v:
     post e2 (post e1 P (Some w)) v ⊢ post (ESeq e1 e2) P v.
   Proof.
-    intros m H.
-    rewrite <-fill_seq.
+    eapply iEntails_trans.
+    eapply (post_pure_step (ESeq (EVal w) e2)).
+    intro. eauto using step_single, head_step.
+    rewrite <- ! fill_seq.
     eapply post_ctxS.
-    simpl.
-    intros mf Hdisj.
-    destruct (H mf) as (m' &e' & H' & Hdisj' & Hsteps & Hval); auto.
-    eauto 8 with astep.
   Qed.
 
   Lemma post_seqN e1 e2 P:
@@ -429,42 +427,35 @@ Section derived_post_rules.
   Lemma post_if_true t e1 e2 P v:
     post e1 (post t P (Some (VBool true))) v ⊢ post (EIf t e1 e2) P v.
   Proof.
-    intros m H.
-    rewrite <- fill_if.
+    eapply iEntails_trans.
+    eapply (post_pure_step (EIf (EVal (VBool true)) e1 e2)).
+    intro. eauto using step_single, head_step.
+    rewrite <- ! fill_if.
     eapply post_ctxS.
-    simpl fill.
-    intros mf Hdisj.
-    specialize (H mf) as (m' & e' & H' & Hdisj' & Hsteps & H);
-    eauto 10 using steps_trans, steps_if_true.
   Qed.
 
   Lemma post_if_false t e1 e2 P v:
     post e2 (post t P (Some (VBool false))) v ⊢ post (EIf t e1 e2) P v.
   Proof.
-    intros m H.
-    rewrite <- fill_if.
+    eapply iEntails_trans.
+    eapply (post_pure_step (EIf (EVal (VBool false)) e1 e2)).
+    intro. eauto using step_single, head_step.
+    rewrite <- ! fill_if.
     eapply post_ctxS.
-    simpl fill.
-    intros mf Hdisj.
-    specialize (H mf) as (m' & e' & H' & Hdisj' & Hsteps & H);
-    eauto 10 using steps_trans, steps_if_false.
   Qed.
 
   Lemma post_while t e P v:
     post (EIf t (ESeq e (EWhile t e)) (EVal VUnit)) P v ⊢ post (EWhile t e) P v.
   Proof.
-    iUnfold.
-    intros m H.
-    intros mf Hdisj.
-    specialize (H mf Hdisj) as (m' & e' & Hdisj' & H' & Hsteps & H).
-    eauto 8 with astep.
+    apply post_pure_step.
+    intro. eauto using step_single, head_step.
   Qed.
 
   Lemma post_op op v1 v2 v P:
     eval_bin_op op v1 v2 = Some v →
     P ⊢ post (EOp op (EVal v1) (EVal v2)) P (Some v).
   Proof.
-    intros Hop m HP mf Hdisj.
+    intros H m HP mf Hdisj.
     repeat eexists; eauto with astep.
   Qed.
 
