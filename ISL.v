@@ -603,8 +603,18 @@ Section hoare.
   Qed.
 
   Lemma hoare_exists_forall {A} P (Q : A -> val -> iProp) e :
-    (∀ x, {{ P }} e {{ v, Q x v }}) <-> {{ P }} e {{ v, ∃ x, Q x v }}.
+    (∀ x, {{ P }} e {{ v, Q x v }}) ↔ {{ P }} e {{ v, ∃ x, Q x v }}.
   Proof.
+    unfold hoare.
+    split; intro.
+    - auto using iExists_elim.
+    - intros.
+      eapply iEntails_trans.
+      2: { apply H. }.
+      eapply iEntails_trans.
+      2: { apply iExists_intro. }.
+      intros m HQ.
+      eassumption.
   Qed.
 
   Lemma hoare_cons : True. Proof. done. Qed.
