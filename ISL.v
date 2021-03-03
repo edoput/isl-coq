@@ -663,8 +663,22 @@ Section hoare.
     apply post_freeN.
   Qed.
 
-  Lemma hoare_loadS : True. Proof. done. Qed.
-  Lemma hoare_loadN : True. Proof. done. Qed.
+  Lemma hoare_loadS l w:
+    {{ l ↦ w}} ELoad(EVal(VLoc l)) {{ v, ⌜ v = w ⌝ ∗ l ↦ w }}.
+  Proof.
+    unfold hoare.
+    intros.
+    apply iPure_elim.
+    intros ->.
+    apply post_loadS.
+  Qed.
+
+  Lemma hoare_loadN l:
+    {{ l ↦ ⊥ }} ELoad(EVal(VLoc l)) {{ERR: l ↦ ⊥ }}.
+  Proof.
+    apply post_loadN.
+  Qed.
+
   Lemma hoare_storeS : True. Proof. done. Qed.
   Lemma hoare_storeN : True. Proof. done. Qed.
   Lemma hoare_val : True. Proof. done. Qed.
