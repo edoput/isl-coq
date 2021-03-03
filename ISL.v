@@ -751,7 +751,17 @@ Section hoare.
   Qed.
   
   (* Derived rules *)
-  Lemma hoare_let : True. Proof. done. Qed.
+  Lemma hoare_let P e Q s v:
+    {{ P }} (subst s v e) {{ r, Q r }} →
+    {{ P }} ELet s (EVal v) e {{ r, Q r }}.
+  Proof.
+    unfold hoare.
+    intros H v'.
+    eapply iEntails_trans.
+    apply H.
+    apply post_let_step.
+  Qed.
+
   Lemma hoare_while : True. Proof. done. Qed.
   Lemma hoare_seqS : True. Proof. done. Qed.
   Lemma hoare_seqN : True. Proof. done. Qed.
