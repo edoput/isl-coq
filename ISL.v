@@ -740,7 +740,7 @@ Section hoare.
     eapply iEntails_trans.
     apply H0.
     eauto using  post_pure_step.
-  Qed.
+  Qed.    
 
   Lemma hoare_no_step e P:
     no_step e → {{ P }} e {{ERR: P}}.
@@ -799,7 +799,17 @@ Section hoare.
     apply post_seqN.
   Qed.
 
-  Lemma hoare_op : True. Proof. done. Qed.
+  Lemma hoare_op op v1 v2 v P:
+    eval_bin_op op v1 v2 = Some v →
+    {{ P }} (EOp op (EVal v1) (EVal v2)) {{ r, ⌜ r = v ⌝ ∗ P }}.
+  Proof.
+    unfold hoare.
+    intros.
+    apply iPure_elim.
+    intros ->.
+    auto using  post_op.
+  Qed.    
+
   Lemma hoare_if_true : True. Proof. done. Qed.
   Lemma hoare_if_false : True. Proof. done. Qed.
 
