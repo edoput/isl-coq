@@ -352,7 +352,7 @@ Section primitive_post_rules.
   Qed.
 
   Lemma post_loadN l:
-    iNegPoints l ⊢ post (ELoad (EVal (VLoc l))) (iNegPoints l) None.
+    l↦ ⊥ ⊢ post (ELoad (EVal (VLoc l))) (l ↦ ⊥) None.
   Proof.
     intros m H mf Hdisj.
     eexists _,_.
