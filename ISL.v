@@ -742,7 +742,14 @@ Section hoare.
     eauto using  post_pure_step.
   Qed.
 
-  Lemma hoare_no_step : True. Proof. done. Qed.
+  Lemma hoare_no_step e P:
+    no_step e → {{ P }} e {{ERR: P}}.
+  Proof.
+    intros.
+    apply post_no_step.
+    assumption.
+  Qed.
+  
   (* Derived rules *)
   Lemma hoare_let : True. Proof. done. Qed.
   Lemma hoare_while : True. Proof. done. Qed.
