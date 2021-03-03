@@ -695,7 +695,15 @@ Section hoare.
     apply post_storeN.
   Qed.
 
-  Lemma hoare_val : True. Proof. done. Qed.
+  Lemma hoare_val v: {{ emp }} (EVal v) {{ r, ⌜ r = v ⌝ }}.
+  Proof.
+    unfold hoare.
+    intros v0.
+    eapply iEntails_trans.
+    apply iPure_elim'.
+    intros.
+    apply iEntails_refl.
+  Admitted.
   Lemma hoare_ctxS : True. Proof. done. Qed.
   Lemma hoare_ctxN : True. Proof. done. Qed.
   Lemma hoare_pure_step : True. Proof. done. Qed.
