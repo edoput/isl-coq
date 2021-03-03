@@ -773,8 +773,32 @@ Section hoare.
     apply post_while.
   Qed.
 
-  Lemma hoare_seqS : True. Proof. done. Qed.
-  Lemma hoare_seqN : True. Proof. done. Qed.
+  Lemma hoare_seqS P R Q e1 e2:
+    {{ P }} e1 {{ v, R }} →
+    {{ R }} e2 {{ v, Q }} →
+    {{ P }} ESeq e1 e2 {{ v, Q }}.
+  Proof.
+    unfold hoare.
+    intros He1 He2 v.
+    eapply iEntails_trans.
+    apply (He2 v).
+    eapply iEntails_trans.
+    2: { apply post_seqS. }.
+    eapply post_mono.
+    eapply (He1 v).
+    apply iEntails_refl.
+  Qed.
+
+  Lemma hoare_seqN P Q e1 e2:
+    {{ P }} e1 {{ERR: Q }} → {{ P }} ESeq e1 e2 {{ERR: Q }}.
+  Proof.
+    unfold hoare_err.
+    intro.
+    eapply iEntails_trans.
+    apply H.
+    apply post_seqN.
+  Qed.
+
   Lemma hoare_op : True. Proof. done. Qed.
   Lemma hoare_if_true : True. Proof. done. Qed.
   Lemma hoare_if_false : True. Proof. done. Qed.
