@@ -704,8 +704,31 @@ Section hoare.
     intros.
     apply iEntails_refl.
   Admitted.
-  Lemma hoare_ctxS : True. Proof. done. Qed.
-  Lemma hoare_ctxN : True. Proof. done. Qed.
+
+  Lemma hoare_ctxS P P' e Q E v:
+    P' = post e P (Some v) →
+    {{ P' }} (fill E (EVal v)) {{ r, Q }} →
+    {{ P }} (fill E e) {{ r, Q }}.
+  Proof.
+    intros HP H.
+    unfold hoare.
+    intro.
+    eapply iEntails_trans.
+    apply H.
+    subst P'.
+    eapply post_ctxS.
+  Qed.
+
+  Lemma hoare_ctxN P e Q E:
+   Q = post e P None →
+   {{ P }} (fill E e) {{ERR: Q }}.
+  Proof.
+    intros.
+    unfold hoare_err.
+    subst Q.
+    apply post_ctxN.
+  Qed.
+
   Lemma hoare_pure_step : True. Proof. done. Qed.
   Lemma hoare_no_step : True. Proof. done. Qed.
   (* Derived rules *)
