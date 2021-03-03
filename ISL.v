@@ -635,7 +635,18 @@ Section hoare.
     apply iEntails_refl.
   Qed.
 
-  Lemma hoare_frame : True. Proof. done. Qed.
+  Lemma hoare_frame P e Q R:
+    {{ P }} e {{ v,  Q v }} →
+    {{ R ∗ P }} e {{v,  R ∗ (Q v) }}.
+  Proof.
+    unfold hoare.
+    intros.
+    eapply iEntails_trans.
+    apply iSep_mono_r.
+    apply H.
+    apply post_frame.
+  Qed.
+
   Lemma hoare_freeS : True. Proof. done. Qed.
   Lemma hoare_freeN : True. Proof. done. Qed.
   Lemma hoare_loadS : True. Proof. done. Qed.
