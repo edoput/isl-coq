@@ -762,7 +762,17 @@ Section hoare.
     apply post_let_step.
   Qed.
 
-  Lemma hoare_while : True. Proof. done. Qed.
+  Lemma hoare_while P e Q t:
+    {{ P }} EIf t (ESeq e (EWhile t e)) (EVal (VUnit)) {{ r, Q }} →
+    {{ P }} EWhile t e {{ r, Q }}.
+  Proof.
+    unfold hoare.
+    intros H v.
+    eapply iEntails_trans.
+    apply H.
+    apply post_while.
+  Qed.
+
   Lemma hoare_seqS : True. Proof. done. Qed.
   Lemma hoare_seqN : True. Proof. done. Qed.
   Lemma hoare_op : True. Proof. done. Qed.
