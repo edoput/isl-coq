@@ -647,8 +647,22 @@ Section hoare.
     apply post_frame.
   Qed.
 
-  Lemma hoare_freeS : True. Proof. done. Qed.
-  Lemma hoare_freeN : True. Proof. done. Qed.
+  Lemma hoare_freeS l v:
+    {{ l ↦ v }} EFree(EVal(VLoc l)) {{ v, ⌜ v = VUnit ⌝ ∗ l ↦ ⊥ }}.
+  Proof.
+    unfold hoare.
+    intros.
+    apply iPure_elim.
+    intros ->.
+    apply post_freeS.
+  Qed.
+
+  Lemma hoare_freeN l :
+    {{ l ↦ ⊥ }} EFree(EVal(VLoc l)) {{ERR: l ↦ ⊥ }}.
+  Proof.
+    apply post_freeN.
+  Qed.
+
   Lemma hoare_loadS : True. Proof. done. Qed.
   Lemma hoare_loadN : True. Proof. done. Qed.
   Lemma hoare_storeS : True. Proof. done. Qed.
