@@ -570,9 +570,7 @@ Section hoare.
     intros v.
     eapply iExists_elim.
     intros x.
-    eapply iPure_elim'.
-    intros ->.
-    eapply post_amb.
+    apply hoare_amb.
   Qed.
 
   Lemma hoare_exists {A} P (Q : A → val → iProp) e :
