@@ -96,8 +96,8 @@ Section seplogic.
   Proof. duh. Qed.
 
   Lemma iForall_elim {A} (P : A → iProp) x : (∀ z, P z) ⊢ P x.
-
   Proof. duh. Qed.
+
   Lemma iExists_intro {A} (P : A → iProp) x : P x ⊢ ∃ z, P z.
   Proof. duh. Qed.
 
