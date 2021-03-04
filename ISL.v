@@ -231,8 +231,8 @@ Section primitive_post_rules.
     apply map_union_comm. solve_map_disjoint.
   Qed.
 
-  Lemma post_val v (Q : val -> iProp) :
-    (Q v) ⊢ post (EVal v) (Q v) (Some v).
+  Lemma post_val v Q :
+    Q ⊢ post (EVal v) Q (Some v).
   Proof.
     iUnfold. intros ???. repeat eexists; eauto using steps_refl.
   Qed.
@@ -468,7 +468,7 @@ Section derived_post_rules.
     P ⊢ post EAmb P (Some (VNat n)).
   Proof.
     eapply iEntails_trans.
-    2: { eauto using post_pure_step, (pure_step_amb n). }.
+    2: { eauto using post_pure_step, (pure_step_amb n). }
     (* oopsie this is not the right shape for proving with post_val *)
     (* at the same time it is provable by hand *)
     intros m HP mf Hdisj.
@@ -615,9 +615,9 @@ Section hoare.
     - auto using iExists_elim.
     - intros.
       eapply iEntails_trans.
-      2: { apply H. }.
+      2: { apply H. }
       eapply iEntails_trans.
-      2: { apply iExists_intro. }.
+      2: { apply iExists_intro. }
       intros m HQ.
       eassumption.
   Qed.
@@ -702,13 +702,8 @@ Section hoare.
 
   Lemma hoare_val v: {{ emp }} (EVal v) {{ r, ⌜ r = v ⌝ }}.
   Proof.
-    unfold hoare.
-    intros v0.
-    eapply iEntails_trans.
-    apply iPure_elim'.
-    intros.
-    apply iEntails_refl.
-  Admitted.
+    intro. apply iPure_elim'. intros ->. apply post_val.
+  Qed.
 
   Lemma hoare_ctxS P P' e Q E v:
     P' = post e P (Some v) →
@@ -745,7 +740,7 @@ Section hoare.
     eapply iEntails_trans.
     apply H0.
     eauto using  post_pure_step.
-  Qed.    
+  Qed.
 
   Lemma hoare_no_step e P:
     no_step e → {{ P }} e {{ERR: P}}.
@@ -754,7 +749,7 @@ Section hoare.
     apply post_no_step.
     assumption.
   Qed.
-  
+
   (* Derived rules *)
   Lemma hoare_let P e Q s v:
     {{ P }} (subst s v e) {{ r, Q r }} →
@@ -813,7 +808,7 @@ Section hoare.
     apply iPure_elim.
     intros ->.
     auto using  post_op.
-  Qed.    
+  Qed.
 
   Lemma hoare_if_true P Q e1 e2:
     {{ P }} e1 {{ r, Q }} →
