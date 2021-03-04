@@ -462,13 +462,20 @@ Section derived_post_rules.
   Lemma pure_step_amb n : pure_step EAmb (EVal $ VNat n).
   Proof.
     intro. eauto with astep.
-  Admitted.
+  Qed.
 
   Lemma post_amb P n :
     P ⊢ post EAmb P (Some (VNat n)).
   Proof.
-    (* Prove in terms of pure_step_amb, post_pure_step, post_val *)
-  Admitted.
+    eapply iEntails_trans.
+    2: { eauto using post_pure_step, (pure_step_amb n). }.
+    (* oopsie this is not the right shape for proving with post_val *)
+    (* at the same time it is provable by hand *)
+    intros m HP mf Hdisj.
+    exists m, (EVal (VNat n)).
+    simpl.
+    eauto using steps_refl.
+  Qed.
 
   Lemma no_step_EError : no_step EError.
   Proof.
