@@ -469,12 +469,7 @@ Section derived_post_rules.
   Proof.
     eapply iEntails_trans.
     2: { eauto using post_pure_step, (pure_step_amb n). }
-    (* oopsie this is not the right shape for proving with post_val *)
-    (* at the same time it is provable by hand *)
-    intros m HP mf Hdisj.
-    exists m, (EVal (VNat n)).
-    simpl.
-    eauto using steps_refl.
+    apply post_val.
   Qed.
 
   Lemma no_step_EError : no_step EError.
