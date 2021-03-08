@@ -602,10 +602,25 @@ Section hoare.
     + eapply post_mono. eapply iOr_intro_r. done.
   Qed.
 
-  Lemma hoare_exists_forall {A} P (Q : A -> val -> iProp) e :
+  Lemma hoare_exists_forallS {A} P (Q : A -> val -> iProp) e :
     (∀ x, {{ P }} e {{ v, Q x v }}) ↔ {{ P }} e {{ v, ∃ x, Q x v }}.
   Proof.
     unfold hoare.
+    split; intro.
+    - auto using iExists_elim.
+    - intros.
+      eapply iEntails_trans.
+      2: { apply H. }
+      eapply iEntails_trans.
+      2: { apply iExists_intro. }
+      intros m HQ.
+      eassumption.
+  Qed.
+
+  Lemma hoare_exists_forallN {A} (P : iProp) e (Q : A → iProp):
+    (∀ x, {{ P }} e {{ERR: Q x }}) ↔ {{ P }} e {{ERR: ∃ x, Q x }}.
+  Proof.
+    unfold hoare_err.
     split; intro.
     - auto using iExists_elim.
     - intros.
@@ -633,6 +648,21 @@ Section hoare.
     eapply post_mono.
     eassumption.
     apply iEntails_refl.
+  Qed.
+
+  Lemma hoare_consN (P P': iProp) e (Q Q' : iProp) :
+    (P ⊢ P') →
+    (Q' ⊢ Q) →
+    {{ P }} e {{ERR: Q}} →
+    {{ P' }} e {{ERR: Q'}}.
+  Proof.
+    intros.
+    unfold hoare_err in *.
+    eapply iEntails_trans.
+    apply H0.
+    eapply post_mono.
+    apply H.
+    assumption.
   Qed.
 
   Lemma hoare_frame P e Q R:
@@ -778,21 +808,29 @@ Section hoare.
     eapply iEntails_trans.
     apply (He2 v).
     eapply iEntails_trans.
-    2: { apply post_seqS. }.
+    2: { apply post_seqS. }
     eapply post_mono.
     eapply (He1 v).
     apply iEntails_refl.
   Qed.
 
-  Lemma hoare_seqN P Q e1 e2:
-    {{ P }} e1 {{ERR: Q }} → {{ P }} ESeq e1 e2 {{ERR: Q }}.
+  Lemma hoare_seqN P R Q e1 e2:
+    {{ P }} e1 {{ v, R v }} →
+    (∀ x, {{ R x }} e2 {{ERR: Q }}) →
+    {{ P }} ESeq e1 e2 {{ERR: Q }}.
   Proof.
-    unfold hoare_err.
-    intro.
+    intros He1 He2.
     eapply iEntails_trans.
-    apply H.
-    apply post_seqN.
-  Qed.
+    apply He2.
+    (* now because of iForall_elim we can get ∀ x, R x ⊢ R z
+       but we first have to get the z out of somewhere and that
+       should come from He1. *)
+    eapply iEntails_trans.
+    eapply post_mono.
+    apply He1.
+    apply iEntails_refl.
+    apply post_seqS.
+  Admitted.
 
   Lemma hoare_op op v1 v2 v P:
     eval_bin_op op v1 v2 = Some v →
