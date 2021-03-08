@@ -1,4 +1,7 @@
+Require Import String.
+Open Scope string_scope.
 Require Export lang.
+From iris.bi Require Import bi.
 Require Export ISL.
 
 (* in this example v is a (EVal (VLoc n))
@@ -12,8 +15,7 @@ Require Export ISL.
    a use after free bug later on.
  *)
 
- Definition push_back : expr → expr :=
-  fun v =>
+ Definition push_back : expr → expr := λ v,
     (ELet "z" EAmb
           (EIf (EOp EqOp (EVar "z") (EVal (VNat 0)))
                (EVal VUnit)
@@ -39,8 +41,7 @@ Definition client : expr :=
           (ESeq (push_back (EVar "v")) (* here the underlying storage for v might be moved *)
                 (EStore (EVar "x") (EVal (VNat 88))))))). (* so using the previous location might fault *)
 
-
-
+(*
 Lemma client_can_error : will_error iEmpty client.
 Proof.
   unfold will_error, client.
@@ -245,3 +246,4 @@ Proof.
   apply steps_single.
   destruct b; eauto using head_step.
 Qed.
+ *)
