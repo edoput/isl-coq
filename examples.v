@@ -247,3 +247,34 @@ Proof.
   destruct b; eauto using head_step.
 Qed.
  *)
+
+(* Finally we can prove the same incorrectness specifications using the fancier rules *)
+Lemma simple_error':
+  hoare_err iEmp EError iEmp.
+Proof.
+  apply hoare_error.
+Qed.
+
+Lemma double_free l:
+  hoare_err (iNegPoints l) (EFree (EVal (VLoc l))) (iNegPoints l).
+Proof.
+  apply hoare_freeN.
+Qed.
+
+Lemma double_free' l v:
+  hoare_err (iPoints l v) (ESeq (EFree (EVal (VLoc l))) (EFree (EVal (VLoc l)))) (iNegPoints l).
+Proof.
+  eapply hoare_seqN.
+  eapply hoare_freeS.
+  intro.
+  simpl.
+  eapply hoare_consN.
+  2: { apply iEntails_refl. }
+  2: { apply hoare_freeN. }
+  eapply iEntails_trans.
+  apply iSep_emp_l.
+  apply iSep_mono.
+  - apply iPure_intro.
+    admit.
+  - apply iEntails_refl.
+Admitted.
