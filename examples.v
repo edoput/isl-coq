@@ -279,28 +279,22 @@ Proof.
   eapply hoare_letN.
   - eapply (hoare_alloc1 0).
   - simpl.
-    eapply (hoare_letN (0 ↦ (VNat 0)) (λ l, 0 ↦ (VNat 0) ∗ 1 ↦ (VLoc 0)))%S.
+    eapply (hoare_letN (λ l, 1 ↦ (VLoc 0) ∗ 0 ↦ (VNat 0)))%S.
     + eapply hoare_cons.
-      apply iSep_emp_r_inv.
-      intro. apply iSep_comm.
+      apply iSep_emp_l_inv.
+      intro. apply iSep_assoc.
       simpl.
-      eapply hoare_cons.
-      apply iEntails_refl.
-      intro.
-      apply iSep_assoc'. simpl.
-      eapply (hoare_frame (0 ↦ (VNat 0)) emp)%S.
-      eapply hoare_cons.
-      apply iEntails_refl.
-      intro. apply iSep_comm. simpl.
+      eapply hoare_frame_r.
       eapply (hoare_alloc1 1).
     + simpl.
-      eapply (hoare_letN  (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0)%S (λ v, 0 ↦ VNat 0 ∗ 1 ↦ VLoc 0)%S).
+      eapply hoare_consN.
+      apply iSep_comm. apply iEntails_refl.
+      eapply (hoare_letN (λ v, 0 ↦ VNat 0 ∗ 1 ↦ VLoc 0)%S).
       * eapply hoare_cons.
         apply iEntails_refl.
-        intro.
-        apply iSep_comm. simpl.
-        eapply hoare_cons. apply iEntails_refl.
-        intro. apply iSep_assoc'. simpl.
+        intro. eapply iEntails_trans.
+        apply iSep_comm.
+        apply iSep_assoc'.
         apply hoare_frame.
         eapply hoare_cons. apply iEntails_refl.
         intro. apply iSep_comm. simpl.
@@ -312,9 +306,9 @@ Proof.
               apply iSep_emp_r_inv. intro.
               apply iSep_comm. simpl.
               apply (hoare_frame (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
-              apply (hoare_amb 0).
+              apply (hoare_amb 1).
            ++ simpl.
-              eapply hoare_if_true.
+              eapply hoare_if_false.
               ** eapply hoare_pure_step.
                  intro. eauto with astep.
                  simpl.
@@ -324,14 +318,126 @@ Proof.
                  apply (hoare_frame (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0)%S).
                  apply hoare_val.
               ** simpl.
-                 eapply hoare_cons.
-                 apply iSep_emp_r_inv.
-                 intro.
-                 apply iSep_comm.
-                 admit.
+                 eapply (hoare_let (λ r, 0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
+                 --- eapply hoare_cons.
+                     apply iEntails_refl.
+                     intro. eapply iEntails_trans.
+                     apply iSep_comm.  apply iSep_assoc'. simpl.
+                     apply hoare_frame.
+                     eapply hoare_cons.
+                     apply iEntails_refl.
+                     intro. apply iSep_comm. simpl.
+                     apply hoare_loadS.
+                 --- simpl.
+                     eapply (hoare_seqS  (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0) (λ l, 0 ↦ ⊥ ∗ 1 ↦ VLoc 0))%S.
+                     +++ eapply hoare_cons.
+                         apply iEntails_refl.
+                         intro. apply iSep_assoc. simpl.
+                         apply hoare_frame_r.
+                         apply hoare_freeS.
+                     +++ eapply (hoare_let (λ l, 0 ↦ ⊥ ∗ 1 ↦ VLoc 0 ∗ 2 ↦ VNat 42))%S.
+                         *** eapply hoare_cons.
+                             eapply iEntails_trans.
+                             2: { apply iSep_emp_r_inv. }
+                             apply iSep_assoc.
+                             intro.
+                             eapply iEntails_trans.
+                             apply iSep_comm.
+                             eapply iEntails_trans.
+                             apply iSep_assoc'.
+                             apply iEntails_refl.
+                             eapply (hoare_frame (0 ↦ ⊥))%S.
+                             eapply hoare_cons.
+                             apply iEntails_refl.
+                             intro. apply iSep_assoc'. simpl.
+                             apply hoare_frame.
+                             eapply hoare_cons.
+                             apply iEntails_refl.
+                             intro. apply iSep_comm. simpl.
+                             apply (hoare_alloc1 2).
+                         *** simpl.
+                             eapply hoare_cons.
+                             apply iSep_assoc'.
+                             intro.
+                             eapply iEntails_trans.
+                             apply iSep_assoc.
+                             apply iSep_assoc.
+                             apply hoare_frame_r.
+                             eapply hoare_cons.
+                             apply iEntails_refl.
+                             intro.
+                             eapply iEntails_trans.
+                             apply iSep_assoc'.
+                             eapply iEntails_trans.
+                             apply iSep_comm.
+                             apply iSep_assoc'. simpl.
+                             apply hoare_frame.
+                             eapply hoare_cons.
+                             apply iEntails_refl.
+                             intro. apply iSep_comm.
+                             apply hoare_storeS.
         -- eapply hoare_consN.
            ++ apply iSep_comm.
            ++ apply iSep_comm.
            ++ apply hoare_frameN.
               apply hoare_storeN.
+Qed.
+
+
+Example pointers_are_distinct := (ELet "x" (EAlloc (EVal (VNat 3)))
+                                          (ELet "y" (EAlloc (EVal (VNat 3)))
+                                                (EIf (EOp EqOp (EVar "x") (EVar "y"))
+                                                     (EVal VUnit)
+                                                     EError))).
+
+
+Lemma pointer_errors : hoare_err (emp)%S pointers_are_distinct (∃ x y, x ↦ (VNat 3) ∗ y ↦ (VNat 3))%S.
+Proof.
+  rewrite <- hoare_exists_forallN.
+  intro n.
+  rewrite <- hoare_exists_forallN.
+  intro m.
+  unfold pointers_are_distinct.
+  (* the way to prove this error is that we are going to allocate stuff and the
+     allocation will give us distinct pointers whose values will be substituted
+     in the if expression and we gonna fault.
+   *)
+  eapply hoare_letN.
+  - apply (hoare_alloc1 n).
+  - simpl.
+    eapply (hoare_letN (λ l, n ↦ VNat 3 ∗ m ↦ VNat 3)%S).
+    + eapply hoare_cons.
+      * apply iSep_emp_r_inv.
+      * intro.
+        eapply iEntails_trans.
+        apply iSep_comm.
+        apply iSep_assoc'.
+      * simpl.
+        eapply (hoare_frame (n ↦ VNat 3)%S).
+        eapply hoare_cons.
+        -- apply iEntails_refl.
+        -- intro. apply iSep_comm.
+        -- simpl.
+           apply (hoare_alloc1 m).
+    + simpl.
+      apply (hoare_ctxSN [(IfCtx (EVal VUnit) EError)] (λ r, n ↦ VNat 3 ∗ m ↦ VNat 3)%S (VBool false)).
+      * destruct (Nat.eq_dec n m).
+        -- admit.
+        -- eapply hoare_pure_step.
+           ++ intro. eauto with astep.
+           ++ eapply hoare_cons.
+              ** apply iSep_emp_l_inv.
+              ** intro. apply iEntails_refl.
+              ** apply hoare_frame_r.
+                 (* TODO *)
+                 admit.
+      * simpl.
+        eapply hoare_pure_stepN.
+        -- intro. eauto with astep.
+        -- apply hoare_frameN.
+           eapply hoare_consN.
+           ++ apply iSep_emp_r_inv.
+           ++ apply iSep_emp_r.
+           ++ apply hoare_frameN.
+              apply hoare_error.
 Admitted.

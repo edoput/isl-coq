@@ -751,7 +751,7 @@ Section hoare.
     intro. apply iPure_elim'. intros ->. apply post_val.
   Qed.
 
-  Lemma hoare_ctxS E P P' e Q v:
+  Lemma hoare_ctxS E P' P e Q v:
     {{ P }} e {{ r,  ⌜ r = v ⌝ ∗ P' r }} →
     {{ P' v }} (fill E (EVal v)) {{ r, Q r}} →
     {{ P }} (fill E e) {{ r, Q r }}.
@@ -774,7 +774,7 @@ Section hoare.
       apply iEntails_refl.
   Qed.
 
-  Lemma hoare_ctxSN E P P' e Q v:
+  Lemma hoare_ctxSN E P' v P e Q:
     {{ P }} e {{ r,  ⌜ r = v ⌝ ∗ P' r }} →
     {{ P' v }} (fill E (EVal v)) {{ERR: Q }} →
     {{ P }} (fill E e) {{ERR: Q }}.
@@ -840,7 +840,7 @@ Section hoare.
   Qed.
 
   (* Derived rules *)
-  Lemma hoare_let P P' Q e1 e2 s v:
+  Lemma hoare_let P' P Q e1 e2 s v:
     {{ P }} e1 {{ r, ⌜ r = v ⌝ ∗ P' r }} →
     {{ P' v }} (subst s v e2) {{ r, Q r }} →
     {{ P }} ELet s e1 e2 {{ r, Q r }}.
@@ -853,8 +853,8 @@ Section hoare.
     - intro. eauto with astep.
     - assumption.
   Qed.
-
-  Lemma hoare_letN P P' e1 Q s e2 v:
+    
+  Lemma hoare_letN P' P Q s e1 e2 v:
     {{ P }} e1 {{ r, ⌜ r = v ⌝ ∗ P' r }} →
     {{ P' v }} (subst s v e2) {{ERR: Q }} →
     {{ P }} (ELet s e1 e2) {{ERR: Q}}.
@@ -985,12 +985,24 @@ Section hoare.
       intro. eauto with astep.
       eassumption.
   Qed.
-
+  
   Lemma hoare_error P:
     {{ P }} EError {{ERR: P }}.
   Proof.
     eauto using hoare_no_step, no_step_EError.
   Qed.
+
+  Lemma hoare_frame_r R P Q e:
+    {{ P }} e {{ r, Q r }} →
+    {{ P ∗ R }} e {{ r, Q r ∗ R }}.
+  Proof.
+  Admitted.
+
+  Lemma hoare_frame_rN R P Q e:
+    {{ P }} e {{ERR: Q }} →
+    {{ P ∗ R }} e {{ERR: Q ∗ R }}.
+  Proof.
+  Admitted.
 
 End hoare.
 (* this is about evaluation of pure expressions *)
