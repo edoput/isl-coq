@@ -530,6 +530,26 @@ Section hoare.
     eapply post_alloc1.
   Qed.
 
+  Lemma hoare_trivial P e:
+    {{ P }} e {{ r, ⌜ False ⌝ }}.
+  Proof.
+    intro.
+    apply iPure_elim'.
+    intro.
+    exfalso.
+    assumption.
+  Qed.
+
+  Lemma hoare_trivialN P e:
+    {{ P }} e {{ERR: ⌜ False ⌝ }}.
+  Proof.
+    intro.
+    apply iPure_elim'.
+    intro.
+    exfalso.
+    assumption.
+  Qed.
+
   Lemma hoare_alloc1 l v:
     {{ emp }} (EAlloc (EVal v)) {{ r, ⌜ r = VLoc l ⌝ ∗ l ↦ v }}.
   Proof.
