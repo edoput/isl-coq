@@ -533,7 +533,11 @@ Section hoare.
   Lemma hoare_alloc1 l v:
     {{ emp }} (EAlloc (EVal v)) {{ r, ⌜ r = VLoc l ⌝ ∗ l ↦ v }}.
   Proof.
-  Admitted.
+    intro v'.
+    apply iPure_elim.
+    intros ->.
+    apply post_alloc1.
+  Qed.
 
   Lemma hoare_alloc1' v :
     {{ emp }} (EAlloc (EVal v)) {{ r, ∃ l, ⌜ r = VLoc l ⌝ ∗ l ↦ v }}.
