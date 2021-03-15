@@ -11,6 +11,7 @@ Definition iPoints (l : nat) (v : val) : iProp := λ m, m = {[ l := (Value v) ]}
 Definition iNegPoints (l : nat) : iProp := λ m, m = {[ l := Reserved ]}.
 Definition iSep (P Q : iProp) : iProp := λ m, ∃ m1 m2, P m1 ∧ Q m2 ∧ m = m1 ∪ m2 ∧ m1 ##ₘ m2 .
 Definition iWand (P Q : iProp) : iProp := λ m, ∀ m', m ##ₘ m' → P m' → Q (m' ∪ m).
+Definition iTrue : iProp := λ m , True.
 Definition iAnd (P Q : iProp) : iProp := λ m, P m ∧ Q m.
 Definition iOr (P Q : iProp) : iProp := λ m, P m ∨ Q m.
 Definition iForall {A} (P : A → iProp) : iProp := λ m, ∀ x, P x m.
@@ -34,7 +35,7 @@ Notation "∃ x1 .. xn , P" :=
   (iExists (fun x1 => .. (iExists (fun xn => P%S)) ..))
   (at level 200, x1 binder, xn binder, right associativity) : S.
 
-Ltac iUnfold := unfold iEmp, iNegPoints, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails, iAnd, iOr in *.
+Ltac iUnfold := unfold iEmp, iNegPoints, iPoints, iSep, iWand, iForall, iExists, iPure, iEntails, iAnd, iOr, iTrue in *.
 
 Section seplogic.
 
