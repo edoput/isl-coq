@@ -469,8 +469,9 @@ Proof.
               ** apply iSep_emp_l_inv.
               ** intro. apply iEntails_refl.
               ** apply hoare_frame_r.
-                 (* TODO *)
-                 admit.
+                 apply Nat.eqb_neq in n0.
+                 rewrite n0.
+                 apply hoare_val.
       * simpl.
         eapply hoare_pure_stepN.
         -- intro. eauto with astep.
@@ -480,4 +481,4 @@ Proof.
            ++ apply iSep_emp_r.
            ++ apply hoare_frameN.
               apply hoare_error.
-Admitted.
+Qed.
