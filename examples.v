@@ -384,6 +384,34 @@ Proof.
 Qed.
 
 
+Lemma distinct l l' v v' :
+  l ↦ v ∗ l' ↦ v' ⊢ ⌜ l ≠ l' ⌝ ∗ iTrue.
+Proof.
+  intros m H.
+  destruct H as (m1 & m2 & H1 & H2 & H & Hdisj).
+  exists ∅, (m1 ∪ m2).
+  split; eauto.
+  - apply iPure_intro.
+    + intro.
+      iUnfold.
+      eapply map_disjoint_spec.
+      * eassumption.
+      * subst m1.
+        apply lookup_singleton.
+      * subst m2.
+        subst l.
+        apply lookup_singleton.
+    + reflexivity.
+  - split; eauto.
+    unfold iTrue.
+    auto.
+    + split; eauto.
+      * rewrite left_id_L.
+        assumption.
+      * rewrite map_disjoint_union_r.
+        split; apply map_disjoint_empty_l.
+Qed.
+
 Example pointers_are_distinct := (ELet "x" (EAlloc (EVal (VNat 3)))
                                           (ELet "y" (EAlloc (EVal (VNat 3)))
                                                 (EIf (EOp EqOp (EVar "x") (EVar "y"))
@@ -422,7 +450,19 @@ Proof.
     + simpl.
       apply (hoare_ctxSN [(IfCtx (EVal VUnit) EError)] (λ r, n ↦ VNat 3 ∗ m ↦ VNat 3)%S (VBool false)).
       * destruct (Nat.eq_dec n m).
-        -- admit.
+        -- eapply hoare_cons.
+             ++ apply iEntails_refl.
+             ++ intro.
+                eapply iEntails_trans.
+                ** apply iSep_mono.
+                   --- apply iEntails_refl.
+                   --- apply distinct.
+                ** apply iEntails_refl.
+             ++ simpl.
+                intros v h H.
+                destruct H as (_ & _ & _ & (_ & _ & (H & _) & _) & _ & _).
+                exfalso.
+                auto.
         -- eapply hoare_pure_step.
            ++ intro. eauto with astep.
            ++ eapply hoare_cons.
