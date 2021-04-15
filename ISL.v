@@ -841,7 +841,7 @@ Section hoare.
     intros.
     eapply iEntails_trans.
     apply H0.
-    eauto using  post_pure_step.
+    eauto using post_pure_step.
   Qed.
 
   Lemma hoare_pure_stepN (P : iProp) (e e' : expr) (Q : iProp):
@@ -874,7 +874,7 @@ Section hoare.
     - intro. eauto with astep.
     - assumption.
   Qed.
-    
+
   Lemma hoare_letN P' P Q s e1 e2 v:
     {{ P }} e1 {{ r, ⌜ r = v ⌝ ∗ P' r }} →
     {{ P' v }} (subst s v e2) {{ERR: Q }} →
@@ -1006,7 +1006,7 @@ Section hoare.
       intro. eauto with astep.
       eassumption.
   Qed.
-  
+
   Lemma hoare_error P:
     {{ P }} EError {{ERR: P }}.
   Proof.
