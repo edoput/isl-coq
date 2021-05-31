@@ -1,4 +1,5 @@
 1. Introduction
+    - List of contributions with forward references to subsequent chapters
 2. Background
     - Syntax
     - Operational semantics
