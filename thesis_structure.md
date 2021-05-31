@@ -7,6 +7,8 @@
 3. Incorrectness separation logic
     - Differences with the literature
         New: variable substitution vs registers, Iris style
+             Frame baking
+             Control flow
     - Over- vs underapproximation
     - Version based on triples
 4. Incorrectness logic with post
@@ -23,3 +25,4 @@
     - Control flow
 6. Coq mechanization
     New: mechanization of incorrectness logic
+7. Related work
