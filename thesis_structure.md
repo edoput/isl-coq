@@ -27,3 +27,7 @@
 6. Coq mechanization
     New: mechanization of incorrectness logic
 7. Related work
+
+Plan:
+1. Make section & paragraph structure.
+2. Write down the definitions, and the inference rules.
