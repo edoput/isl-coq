@@ -990,9 +990,9 @@ Section hoare.
     apply post_while.
   Qed.
 
-  Lemma hoare_seqS P P' Q e1 e2 v:
-    {{ P }} e1 {{ r,  ⌜ r = v ⌝ ∗ P' r }} →
-    {{ P' v }} e2 {{ r, Q r }} →
+  Lemma hoare_seqS P R Q e1 e2:
+    {{ P }} e1 {{ r,  R }} →
+    {{ R }} e2 {{ r, Q r }} →
     {{ P }} (ESeq e1 e2) {{ r, Q r }}.
   Proof.
     intros.
