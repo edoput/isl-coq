@@ -214,6 +214,15 @@ Abort.
 
 Section primitive_post_rules.
 
+  Lemma post_trivial P e v:
+    ⌜ False ⌝ ⊢ post e P v.
+  Proof.
+    intros m H.
+    exfalso.
+    destruct H.
+    done.
+  Qed.
+
   Lemma post_mono P Q R e v:
     (P ⊢ Q) → (R ⊢ post e P v) → (R ⊢ post e Q v).
   Proof.
@@ -230,6 +239,76 @@ Section primitive_post_rules.
     split_and!;[|eexists _,_;split_and!|..]; eauto;
     try solve_map_disjoint; rewrite ?(map_union_comm m m') -?assoc_L; eauto.
     apply map_union_comm. solve_map_disjoint.
+  Qed.
+
+  (* the wand impose a constraint on the extensions of the initial heap
+    P -∗ Q h means that this is a heap h such that if we extend it with a heap
+    h' satisfying P then h ∗ h' satisfies Q.
+
+   In Iris the WAND rule is (∀ v, Φ v -∗ Ψ v) ∗ wp e Φ ⊢ wp e Ψ
+   so we have to adapt to that. We would like to reason about
+   the initial set of heaps though so instead of having Φ, Ψ : val → iProp
+   we are going to have Φ, Ψ : iProp and our rule translates to
+   (Φ -∗ Ψ) ∗ post e Φ v ⊢ post e Ψ v
+
+   Interesting enough I have not used the post_mono here or other primitive rules
+   except for the wand elimination
+  *)
+  Lemma post_wand P R e v :
+    (P -∗ R) ∗ post e P v ⊢ post e R v.
+  Proof.
+    intros m (m1 & m2 & Hm1 & Hm2 & Hm & Hdisj).
+    intros mf Hdisj_mf.
+    erewrite (symmetry_iff map_disjoint m1 m2)  in Hdisj.
+    specialize (Hm2 (m1 ∪ mf)) as (m2' & e' & Hdisj' & Hm2' & Hsteps & H).
+    - apply map_disjoint_union_r_2.
+      + assumption.
+      + subst m.
+        erewrite map_disjoint_union_l in Hdisj_mf.
+        destruct Hdisj_mf as [Hdisj_mf_m1 Hdisj_mf_m2].
+        assumption.
+    - exists (m2' ∪ m1), e'.
+      erewrite map_disjoint_union_r in Hdisj'.
+      destruct Hdisj' as [? ?].
+      split.
+      + apply map_disjoint_union_l_2.
+        * assumption.
+        * subst m.
+          erewrite map_disjoint_union_l in Hdisj_mf.
+          destruct Hdisj_mf as [Hdisj_mf_m1 Hdisj_mf_m2].
+          assumption.
+      + split.
+        * eapply iWand_elim.
+          exists m2', m1.
+          split; eauto.
+        * rewrite map_union_comm in Hm.
+          split.
+          -- rewrite -> 2 (assoc_L _ _) in Hsteps.
+             rewrite <- Hm in Hsteps.
+             assumption.
+          -- rewrite assoc_L in H.
+             rewrite <- Hm in H.
+             assumption.
+          -- rewrite (symmetry_iff map_disjoint m1 m2).
+             done.
+  Qed.
+
+  (* Now on the Iris from the ground up we have seen that the weakest precondition rule
+     for the wand and the rule for monotonicity implies the framing so let's try
+     and do that also here *)
+  Lemma wand_implies_framing P Q e v :
+    Q ∗ post e P v ⊢ post e (Q ∗ P) v.
+  Proof.
+    eapply iEntails_trans.
+    2: {
+      eapply post_wand.
+    }
+    apply iSep_mono.
+    2: {
+      apply iEntails_refl.
+    }
+    eapply iWand_intro_r.
+    eapply iEntails_refl.
   Qed.
 
   Lemma post_val v Q :
