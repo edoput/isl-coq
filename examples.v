@@ -482,3 +482,14 @@ Proof.
            ++ apply hoare_frameN.
               apply hoare_error.
 Qed.
+
+Definition load_of_alloc := (ELoad (EAlloc (EVal (VNat 10)))).
+
+Lemma foo :
+    hoare (emp)%S (ELoad (EAlloc (EVal (VNat 10)))) (λ r, ⌜ r = VNat 10 ⌝ ∗ (3 ↦ VNat 10))%S.
+Proof.
+  eapply (hoare_ctxS ([LoadCtx])).
+  - apply hoare_alloc1.
+  - simpl.
+    apply hoare_loadS.
+Qed.
