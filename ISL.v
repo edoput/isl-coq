@@ -874,7 +874,8 @@ Section hoare.
       apply iEntails_refl.
   Qed.
 
-  Lemma hoare_ctxS_iris E P' P e Q:
+  (* *)
+  Lemma hoare_ctxS_iris_forall E P' P e Q:
     {{ P }} e {{ r, P' r}} →
     (∀ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r}}) →
     {{ P }} (fill E e) {{ r, Q r }}.
@@ -1026,7 +1027,7 @@ Section hoare.
     {{ P }} (ESeq e1 e2) {{ r, Q r }}.
   Proof.
     intros.
-    eapply (hoare_ctxS_iris [(SeqCtx e2)] (λ _, R) P e1 Q); eauto.
+    eapply (hoare_ctxS_iris_forall [(SeqCtx e2)] (λ _, R) P e1 Q); eauto.
     - intro.
       simpl.
       eapply hoare_pure_step.
