@@ -874,6 +874,22 @@ Section hoare.
       apply iEntails_refl.
   Qed.
 
+  Lemma hoare_ctxS_iris E P' P e Q:
+    {{ P }} e {{ r, P' r}} →
+    (∀ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r}}) →
+    {{ P }} (fill E e) {{ r, Q r }}.
+  Proof.
+    intros HP H.
+    unfold hoare.
+    intro.
+    eapply iEntails_trans.
+    2: { apply post_ctxS. }
+    unfold hoare in *.
+    eapply post_mono.
+    - apply HP.
+    - apply (H v).
+  Qed.
+
   Lemma hoare_ctxSN E P' v P e Q:
     {{ P }} e {{ r,  ⌜ r = v ⌝ ∗ P' r }} →
     {{ P' v }} (fill E (EVal v)) {{ERR: Q }} →
