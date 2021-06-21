@@ -1026,18 +1026,14 @@ Section hoare.
     {{ P }} (ESeq e1 e2) {{ r, Q r }}.
   Proof.
     intros.
-    eapply (hoare_ctxS [(SeqCtx e2)] (λ _, R) P e1 Q _); eauto.
-    - unfold hoare.
-      intro.
-      apply iPure_elim.
-      intro.
-      apply H.
-    - simpl.
+    eapply (hoare_ctxS_iris [(SeqCtx e2)] (λ _, R) P e1 Q); eauto.
+    - intro.
+      simpl.
       eapply hoare_pure_step.
       2: { eauto. }
       intro.
       eauto with astep.
-  Admitted. 
+  Qed.
 
   Lemma haore_seqN P Q e1 e2:
     {{ P }} e1 {{ERR: Q}} →
