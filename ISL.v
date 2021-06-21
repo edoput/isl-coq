@@ -990,9 +990,9 @@ Section hoare.
     apply post_while.
   Qed.
 
-  Lemma hoare_seqS P R Q e1 e2:
-    {{ P }} e1 {{ r,  R }} →
-    {{ R }} e2 {{ r, Q r }} →
+  Lemma hoare_seqS P R Q e1 e2 v:
+    {{ P }} e1 {{ r, ⌜ r = v ⌝ ∗ R r }} →
+    {{ R v }} e2 {{ r, Q r }} →
     {{ P }} (ESeq e1 e2) {{ r, Q r }}.
   Proof.
     intros.
@@ -1003,6 +1003,25 @@ Section hoare.
     intro.
     eauto with astep.
   Qed.
+
+  Lemma hoare_seqS' P R Q e1 e2:
+    {{ P }} e1 {{ r, R }} →
+    {{ R }} e2 {{ r, Q r }} →
+    {{ P }} (ESeq e1 e2) {{ r, Q r }}.
+  Proof.
+    intros.
+    eapply (hoare_ctxS [(SeqCtx e2)] (λ _, R) P e1 Q _); eauto.
+    - unfold hoare.
+      intro.
+      apply iPure_elim.
+      intro.
+      apply H.
+    - simpl.
+      eapply hoare_pure_step.
+      2: { eauto. }
+      intro.
+      eauto with astep.
+  Admitted. 
 
   Lemma haore_seqN P Q e1 e2:
     {{ P }} e1 {{ERR: Q}} →
