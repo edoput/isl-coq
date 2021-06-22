@@ -774,7 +774,7 @@ Section hoare.
     assumption.
   Qed.
 
-  Lemma hoare_frame R P Q e:
+  Lemma hoare_frame_l R P Q e:
     {{ P }} e {{ v,  Q  v }} →
     {{ R ∗ P }} e {{v, R ∗ Q v}}.
   Proof.
@@ -786,7 +786,7 @@ Section hoare.
     apply post_frame.
   Qed.
 
-  Lemma hoare_frameN R P Q e:
+  Lemma hoare_frame_lN R P Q e:
     {{ P }} e {{ERR: Q }} →
     {{ R ∗ P }} e {{ERR: R ∗ Q }}.
   Proof.
@@ -1146,13 +1146,27 @@ Section hoare.
     {{ P }} e {{ r, Q r }} →
     {{ P ∗ R }} e {{ r, Q r ∗ R }}.
   Proof.
-  Admitted.
+    intros.
+    eapply hoare_cons.
+    apply iSep_comm.
+    intro.
+    apply iSep_comm.
+    simpl.
+    eauto using hoare_frame_l.
+  Qed.
 
   Lemma hoare_frame_rN R P Q e:
     {{ P }} e {{ERR: Q }} →
     {{ P ∗ R }} e {{ERR: Q ∗ R }}.
   Proof.
-  Admitted.
+    intros.
+    eapply hoare_consN.
+    apply iSep_comm.
+    intro.
+    apply iSep_comm.
+    simpl.
+    eauto using hoare_frame_lN.
+  Qed.
 
 End hoare.
 (* this is about evaluation of pure expressions *)
