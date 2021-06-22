@@ -295,7 +295,7 @@ Proof.
         intro. eapply iEntails_trans.
         apply iSep_comm.
         apply iSep_assoc'.
-        apply hoare_frame.
+        apply hoare_frame_l.
         eapply hoare_cons. apply iEntails_refl.
         intro. apply iSep_comm. simpl.
         apply hoare_loadS.
@@ -305,7 +305,7 @@ Proof.
            ++ eapply hoare_cons.
               apply iSep_emp_r_inv. intro.
               apply iSep_comm. simpl.
-              apply (hoare_frame (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
+              apply (hoare_frame_l (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
               apply (hoare_amb 1).
            ++ simpl.
               eapply hoare_if_false.
@@ -315,7 +315,7 @@ Proof.
                  eapply hoare_cons.
                  apply iSep_emp_r_inv.
                  intro. apply iSep_comm. simpl.
-                 apply (hoare_frame (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0)%S).
+                 apply (hoare_frame_l (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0)%S).
                  apply hoare_val.
               ** simpl.
                  eapply (hoare_let (λ r, 0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
@@ -323,13 +323,15 @@ Proof.
                      apply iEntails_refl.
                      intro. eapply iEntails_trans.
                      apply iSep_comm.  apply iSep_assoc'. simpl.
-                     apply hoare_frame.
+                     apply hoare_frame_l.
                      eapply hoare_cons.
                      apply iEntails_refl.
                      intro. apply iSep_comm. simpl.
                      apply hoare_loadS.
                  --- simpl.
-                     eapply (hoare_seqS  (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0) (λ l, 0 ↦ ⊥ ∗ 1 ↦ VLoc 0))%S.
+                     eapply (hoare_seqS
+                               (λ l, 0 ↦ ⊥ ∗ 1 ↦ VLoc 0)
+                               (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
                      +++ eapply hoare_cons.
                          apply iEntails_refl.
                          intro. apply iSep_assoc. simpl.
@@ -346,11 +348,11 @@ Proof.
                              eapply iEntails_trans.
                              apply iSep_assoc'.
                              apply iEntails_refl.
-                             eapply (hoare_frame (0 ↦ ⊥))%S.
+                             eapply (hoare_frame_l (0 ↦ ⊥))%S.
                              eapply hoare_cons.
                              apply iEntails_refl.
                              intro. apply iSep_assoc'. simpl.
-                             apply hoare_frame.
+                             apply hoare_frame_l.
                              eapply hoare_cons.
                              apply iEntails_refl.
                              intro. apply iSep_comm. simpl.
@@ -371,7 +373,7 @@ Proof.
                              eapply iEntails_trans.
                              apply iSep_comm.
                              apply iSep_assoc'. simpl.
-                             apply hoare_frame.
+                             apply hoare_frame_l.
                              eapply hoare_cons.
                              apply iEntails_refl.
                              intro. apply iSep_comm.
@@ -379,7 +381,7 @@ Proof.
         -- eapply hoare_consN.
            ++ apply iSep_comm.
            ++ apply iSep_comm.
-           ++ apply hoare_frameN.
+           ++ apply hoare_frame_lN.
               apply hoare_storeN.
 Qed.
 
@@ -441,7 +443,7 @@ Proof.
         apply iSep_comm.
         apply iSep_assoc'.
       * simpl.
-        eapply (hoare_frame (n ↦ VNat 3)%S).
+        eapply (hoare_frame_l (n ↦ VNat 3)%S).
         eapply hoare_cons.
         -- apply iEntails_refl.
         -- intro. apply iSep_comm.
@@ -475,11 +477,11 @@ Proof.
       * simpl.
         eapply hoare_pure_stepN.
         -- intro. eauto with astep.
-        -- apply hoare_frameN.
+        -- apply hoare_frame_lN.
            eapply hoare_consN.
            ++ apply iSep_emp_r_inv.
            ++ apply iSep_emp_r.
-           ++ apply hoare_frameN.
+           ++ apply hoare_frame_lN.
               apply hoare_error.
 Qed.
 

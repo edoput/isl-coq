@@ -945,7 +945,7 @@ Section hoare.
     apply post_ctxN.
   Qed.
 
-  Lemma hoare_pure_step P e e' Q:
+  Lemma hoare_pure_step e' P e Q:
     pure_step e e' →
     {{ P }} e' {{ r, Q r }} →
     {{ P }} e  {{ r, Q r }}.
@@ -1025,7 +1025,7 @@ Section hoare.
     apply post_while.
   Qed.
 
-  Lemma hoare_seqS P R Q e1 e2 v:
+  Lemma hoare_seqS R P Q e1 e2 v:
     {{ P }} e1 {{ r, ⌜ r = v ⌝ ∗ R r }} →
     {{ R v }} e2 {{ r, Q r }} →
     {{ P }} (ESeq e1 e2) {{ r, Q r }}.
@@ -1086,7 +1086,7 @@ Section hoare.
     auto using  post_op.
   Qed.
 
-  Lemma hoare_if_true P P' Q t e1 e2:
+  Lemma hoare_if_true P' P Q t e1 e2:
     {{ P }} t {{ r, ⌜ r = VBool true ⌝ ∗ P' r }} →
     {{ P' (VBool true) }} e1 {{ r, Q r }} →
     {{ P }} EIf t e1 e2 {{ r, Q r }}.
@@ -1111,7 +1111,7 @@ Section hoare.
       eassumption.
   Qed.
 
-  Lemma hoare_if_false P P' Q t e1 e2:
+  Lemma hoare_if_false P' P Q t e1 e2:
     {{ P }} t {{ r, ⌜ r = VBool false ⌝ ∗ P' r }} →
     {{ P' (VBool false) }} e2 {{ r, Q r }} →
     {{ P }} EIf t e1 e2 {{ r, Q r }}.
