@@ -741,7 +741,7 @@ Section hoare.
       eassumption.
   Qed.
 
-  Lemma hoare_cons (P P': iProp) e (Q Q' : val → iProp) :
+  Lemma hoare_cons (P : iProp) (Q : val → iProp) (P' : iProp) e (Q' : val → iProp) :
     (P ⊢ P') →
     (∀ v, (Q' v) ⊢ (Q v)) →
     {{ P }} e {{ v, Q v }} →
@@ -1051,7 +1051,7 @@ Section hoare.
     eauto with astep.
   Qed.
 
-  Lemma hoare_seqS' P R Q e1 e2:
+  Lemma hoare_seqS' R P Q e1 e2:
     {{ P }} e1 {{ r, R }} →
     {{ R }} e2 {{ r, Q r }} →
     {{ P }} (ESeq e1 e2) {{ r, Q r }}.
@@ -1074,7 +1074,7 @@ Section hoare.
     eapply (hoare_ctxN  [(SeqCtx e2)]); eauto.
   Qed.
 
-  Lemma hoare_seqSN P R Q e1 e2 v:
+  Lemma hoare_seqSN R P Q e1 e2 v:
     {{ P }} e1 {{ r , ⌜ r = v ⌝ ∗ R r }} →
     {{ R v }} e2 {{ERR: Q }} →
     {{ P }} ESeq e1 e2 {{ERR: Q }}.
@@ -1111,7 +1111,7 @@ Section hoare.
     - assumption.
   Qed.
 
-  Lemma hoare_if_trueN P P' Q t e1 e2:
+  Lemma hoare_if_trueN P' P Q t e1 e2:
     {{ P }} t {{ r, ⌜ r = VBool true ⌝ ∗ P' r }} →
     {{ P' (VBool true) }} e1 {{ERR: Q }} →
     {{ P }} EIf t e1 e2 {{ERR: Q }}.
@@ -1136,7 +1136,7 @@ Section hoare.
     - assumption.
   Qed.
 
-  Lemma hoare_if_falseN P P' Q t e1 e2:
+  Lemma hoare_if_falseN P' P Q t e1 e2:
     {{ P }} t {{ r, ⌜ r = VBool false ⌝ ∗ P' r }} →
     {{ P' (VBool false) }} e2 {{ERR: Q }} →
     {{ P }} EIf t e1 e2 {{ERR: Q }}.
