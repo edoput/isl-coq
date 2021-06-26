@@ -851,30 +851,42 @@ Section hoare.
     intro. apply iPure_elim'. intros ->. apply post_val.
   Qed.
 
-  Lemma hoare_ctxS E P' P e Q v:
+
+  Lemma hoare_ctxS E Φ P' P e Q v:
+    {{ P }} e {{r, ⌜ Φ r ⌝ ∗ P' r }} →
+    {{ ⌜ Φ v ⌝ ∗ P' v }} (fill E (EVal v)) {{ r, Q r}} →
+    {{ P }} (fill E e) {{ r, Q r }}.
+  Proof.
+    intros HP H.
+    unfold hoare in *.
+    intro.
+    eapply iEntails_trans.
+    2: { apply post_ctxS. }
+    eapply post_mono.
+    - apply HP.
+    - eapply post_mono.
+      2: { apply H. }
+      apply iEntails_refl.
+  Qed.
+
+  Lemma hoare_ctxS' E P' P e Q v:
     {{ P }} e {{ r,  ⌜ r = v ⌝ ∗ P' r }} →
     {{ P' v }} (fill E (EVal v)) {{ r, Q r}} →
     {{ P }} (fill E e) {{ r, Q r }}.
   Proof.
     intros HP H.
-    unfold hoare.
-    intro.
-    eapply iEntails_trans.
-    2: { apply post_ctxS. }
-    unfold hoare in *.
-    eapply post_mono.
-    - apply HP.
-    - eapply post_mono.
-      2: { apply H. }
-      eapply iEntails_trans.
-      apply iSep_emp_l.
-      apply iSep_mono.
-      apply iPure_intro.
-      reflexivity.
-      apply iEntails_refl.
+    eapply (hoare_ctxS E (λ r: val,  r = v) P' P e Q  v).
+    eassumption.
+    eapply hoare_cons.
+    - eapply iEntails_trans.
+      + apply (iSep_emp_l (P' v)).
+      + apply iSep_mono_l.
+        apply iPure_intro.
+        reflexivity.
+    - intro. apply iEntails_refl.
+    - eauto.
   Qed.
 
-  (* *)
   Lemma hoare_ctxS_iris_forall E P' P e Q:
     {{ P }} e {{ r, P' r}} →
     (∀ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r}}) →
@@ -981,7 +993,7 @@ Section hoare.
     {{ P }} ELet s e1 e2 {{ r, Q r }}.
   Proof.
     intros H0 H1.
-    eapply (hoare_ctxS [(LetCtx s e2)]).
+    eapply (hoare_ctxS' [(LetCtx s e2)]).
     eassumption.
     simpl.
     eapply hoare_pure_step.
@@ -1031,7 +1043,7 @@ Section hoare.
     {{ P }} (ESeq e1 e2) {{ r, Q r }}.
   Proof.
     intros.
-    eapply (hoare_ctxS [(SeqCtx e2)]); eauto.
+    eapply (hoare_ctxS' [(SeqCtx e2)]); eauto.
     simpl.
     eapply hoare_pure_step.
     2: { eauto. }
@@ -1092,7 +1104,7 @@ Section hoare.
     {{ P }} EIf t e1 e2 {{ r, Q r }}.
   Proof.
     intros.
-    eapply (hoare_ctxS [(IfCtx e1 e2)]); eauto.
+    eapply (hoare_ctxS' [(IfCtx e1 e2)]); eauto.
     simpl.
     eapply hoare_pure_step.
     - intro. eauto with astep.
@@ -1117,7 +1129,7 @@ Section hoare.
     {{ P }} EIf t e1 e2 {{ r, Q r }}.
   Proof.
     intros.
-    eapply (hoare_ctxS [(IfCtx e1 e2)]); eauto.
+    eapply (hoare_ctxS' [(IfCtx e1 e2)]); eauto.
     simpl.
     eapply hoare_pure_step.
     - intro. eauto with astep.
