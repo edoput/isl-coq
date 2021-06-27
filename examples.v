@@ -495,3 +495,74 @@ Proof.
   - simpl.
     apply hoare_loadS.
 Qed.
+
+Section BIND.
+  (* In this section we explore the BIND rule for ISL and what kind of triple we can prove *)
+
+  (*
+    Our context is K ≝ let x = ⬜ in if 1 ≤ x then x else error
+    and we are going to prove the triple {{ True }} 
+   *)
+  Definition K := [LetCtx "x" (EIf (EOp LeOp (EVal (VNat 1)) (EVar "x")) (EVar "x") (EError))].
+
+  
+  Lemma safe_number n:
+    hoare (emp)%S (fill K (EVal (VNat n))) (λ r, ⌜ r = (VNat n) ⌝ ∗ ⌜ 1 ≤ n⌝)%S.
+  Proof.
+    eapply (hoare_ctxS_iris' K
+                             (λ r, ⌜ r = VNat n ⌝)
+                             emp
+                             (EVal (VNat n))
+                             (λ v, λ r, ⌜ r = VNat n ⌝ ∗ ⌜ 1 ≤ n⌝)
+                             (VNat n))%S.
+    - apply hoare_val.
+    - intro.
+      simpl.
+      eapply (hoare_let
+                (λ r, emp)
+                ⌜ w = VNat n ⌝
+                (λ r : val, (⌜ r = VNat n ⌝ ∗ ⌜ 1 ≤ n ⌝))
+                (EVal w)
+                (EIf (EOp LeOp (EVal (VNat 1)) (EVar "x")) (EVar "x") (EError))
+                "x"
+                (VNat n)
+             )%S.
+      + admit.
+      + simpl.
+        eapply hoare_cons.
+        * apply iEntails_refl.
+        * intro.
+          apply iSep_comm.
+        * simpl.
+          apply hoare_pureS.
+          intros.
+          eapply (hoare_if_true (λ r, emp))%S.
+          -- apply hoare_op.
+             admit.
+          -- apply hoare_val.
+  Admitted.
+
+  Lemma unsafe_number n:
+    hoare_err (emp)%S (fill K (EVal (VNat n))) ( ⌜ n < 1⌝)%S.
+  Proof.
+    eapply hoare_consN.
+    - apply iEntails_refl.
+    - apply iSep_emp_r.
+    - apply hoare_pureN.
+      intro.
+      simpl.
+      eapply (hoare_letN (λ r, emp))%S.
+      + eapply hoare_cons.
+        * apply iEntails_refl.
+        * intro.
+          apply iSep_emp_r_inv.
+        * simpl.
+          apply hoare_val.
+      + simpl.
+        eapply (hoare_if_falseN (λ r, emp))%S.
+        * apply hoare_op.
+          admit.
+        * eauto using hoare_no_step, no_step_EError.
+  Admitted.
+
+End BIND.
