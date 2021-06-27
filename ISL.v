@@ -335,6 +335,13 @@ Section primitive_post_rules.
     simpl. eauto 8 using steps_context, is_error_fill.
   Qed.
 
+  Lemma post_ctxS' E e Φ P v w:
+    ⌜ Φ w ⌝ ∗ post (fill E (EVal w)) (post e P (Some w)) v ⊢ post (fill E e) P v.
+  Proof.
+    apply iPure_elim.
+    intro.
+    apply post_ctxS.
+  Qed.
 
   Definition pure_step (e e' : expr) := ∀ h,  step e h e' h.
 
@@ -901,6 +908,24 @@ Section hoare.
     eapply post_mono.
     - apply HP.
     - apply (H v).
+  Qed.
+
+  Lemma hoare_ctxS_iris_forall' E P' P e Q v:
+    {{ P }} e {{ r, P' r }} →
+    (∀ w, {{ P' w }} (fill E (EVal w)) {{ r, Q w r}}) →
+    {{ P }} (fill E e) {{ r, Q v r }}.
+  Proof.
+    intros.
+    specialize (H0 v).
+    unfold hoare in *.
+    intro.
+    eapply iEntails_trans.
+    2:{ apply post_ctxS. }
+    eapply iEntails_trans.
+    - apply H0.
+    - eapply post_mono.
+      + apply H.
+      + apply iEntails_refl.
   Qed.
 
   Lemma hoare_ctxS_iris_exists E P' P e Q:
