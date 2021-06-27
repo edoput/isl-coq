@@ -317,6 +317,24 @@ Section primitive_post_rules.
     iUnfold. intros ???. repeat eexists; eauto using steps_refl.
   Qed.
 
+  (* I think this is the closest I can get to wp_bind  as the result assertion
+     Q must also reference the value w we will use in the substitution *)
+  Lemma post_bind E e P Q v w:
+    (Q w v ⊢ post (fill E (EVal w)) (post e P (Some w)) (Some v)) →
+    (Q w v ⊢ post (fill E e) P (Some v)).
+  Proof.
+    intros?????.
+    specialize (H m H0 mf H1) as (?&?&?&?&?&?).
+    specialize (H2 mf H) as (?&?&?&?&?&?).
+    asimpl.
+    eauto 10 using steps_trans, steps_context.
+  Qed.
+
+  (* We can recover the other context rule by the post_mono;
+
+     (post e P (Some w)) ⊢ Φ w →
+     post (fill E (EVal w)) (Φ w) v ⊢ post (fill E e) P v.
+*)
   Lemma post_ctxS E e P v w :
     post (fill E (EVal w)) (post e P (Some w)) v ⊢ post (fill E e) P v.
   Proof.
@@ -894,7 +912,7 @@ Section hoare.
     - eauto.
   Qed.
 
-  Lemma hoare_ctxS_iris_forall E P' P e Q:
+  Lemma hoare_ctxS_iris E P' P e Q:
     {{ P }} e {{ r, P' r}} →
     (∀ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r}}) →
     {{ P }} (fill E e) {{ r, Q r }}.
@@ -910,7 +928,7 @@ Section hoare.
     - apply (H v).
   Qed.
 
-  Lemma hoare_ctxS_iris_forall' E P' P e Q v:
+  Lemma hoare_ctxS_iris' E P' P e Q v:
     {{ P }} e {{ r, P' r }} →
     (∀ w, {{ P' w }} (fill E (EVal w)) {{ r, Q w r}}) →
     {{ P }} (fill E e) {{ r, Q v r }}.
@@ -926,24 +944,6 @@ Section hoare.
     - eapply post_mono.
       + apply H.
       + apply iEntails_refl.
-  Qed.
-
-  Lemma hoare_ctxS_iris_exists E P' P e Q:
-    {{ P }} e {{ r, P' r }} →
-    (∃ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r }}) →
-    {{ P }} (fill E e) {{ r, Q r}}.
-  Proof.
-    intros HP H.
-    unfold hoare in *.
-    destruct H as [w H].
-    intro.
-    eapply iEntails_trans.
-    - apply H.
-    - eapply iEntails_trans.
-      2: { apply post_ctxS. }
-      eapply post_mono.
-      apply HP.
-      apply iEntails_refl.
   Qed.
 
   Lemma hoare_ctxSN E P' v P e Q:
@@ -1082,7 +1082,7 @@ Section hoare.
     {{ P }} (ESeq e1 e2) {{ r, Q r }}.
   Proof.
     intros.
-    eapply (hoare_ctxS_iris_forall [(SeqCtx e2)] (λ _, R) P e1 Q); eauto.
+    eapply (hoare_ctxS_iris [(SeqCtx e2)] (λ _, R) P e1 Q); eauto.
     - intro.
       simpl.
       eapply hoare_pure_step.
