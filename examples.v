@@ -501,7 +501,8 @@ Section BIND.
 
   (*
     Our context is K ≝ let x = ⬜ in if 1 ≤ x then x else error
-    and we are going to prove the triple {{ True }} 
+    and we are going to prove the triples
+    {{ emp }} K[n] {{ r, ⌜ r = n ⌝ ∗ ⌜ 1 ≤ n ⌝ }}
    *)
   Definition K := [LetCtx "x" (EIf (EOp LeOp (EVal (VNat 1)) (EVar "x")) (EVar "x") (EError))].
 
@@ -527,18 +528,18 @@ Section BIND.
                 "x"
                 (VNat n)
              )%S.
-      + admit.
+      + admit. (* the assertion must change place from presumption to result so I can use hoare_intro *)
       + simpl.
         eapply hoare_cons.
         * apply iEntails_refl.
         * intro.
           apply iSep_comm.
         * simpl.
-          apply hoare_pureS.
+          apply hoare_introS.
           intros.
           eapply (hoare_if_true (λ r, emp))%S.
           -- apply hoare_op.
-             admit.
+             admit. (* here it's just a matter of proving result for eval_bin_op *)
           -- apply hoare_val.
   Admitted.
 
@@ -548,7 +549,7 @@ Section BIND.
     eapply hoare_consN.
     - apply iEntails_refl.
     - apply iSep_emp_r.
-    - apply hoare_pureN.
+    - apply hoare_introN.
       intro.
       simpl.
       eapply (hoare_letN (λ r, emp))%S.
@@ -561,7 +562,7 @@ Section BIND.
       + simpl.
         eapply (hoare_if_falseN (λ r, emp))%S.
         * apply hoare_op.
-          admit.
+          admit. (* again just a matter of proving results about eval_bin_op *)
         * eauto using hoare_no_step, no_step_EError.
   Admitted.
 

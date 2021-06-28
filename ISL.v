@@ -823,6 +823,22 @@ Section hoare.
     apply post_frame.
   Qed.
 
+  Lemma hoare_introS (Φ : val → Prop) P e Q:
+    (∀ v, Φ v → {{ P }} e {{ r, Q r }}) → {{ P }} e {{ r, ⌜ Φ r ⌝ ∗ Q r}}.
+  Proof.
+    intros.
+    unfold hoare in *.
+    eauto using iPure_elim.
+  Qed.
+
+  Lemma hoare_introN (Φ : Prop) P e Q:
+    (Φ → {{ P }} e {{ERR: Q}}) → {{ P }} e {{ERR: ⌜ Φ ⌝ ∗ Q }}.
+  Proof.
+    intros.
+    unfold hoare_err in *.
+    eauto using iPure_elim.
+  Qed.
+
   Lemma hoare_freeS l v:
     {{ l ↦ v }} EFree(EVal(VLoc l)) {{ v, ⌜ v = VUnit ⌝ ∗ l ↦ ⊥ }}.
   Proof.
