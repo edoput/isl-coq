@@ -962,6 +962,24 @@ Section hoare.
       + apply iEntails_refl.
   Qed.
 
+  Lemma hoare_ctxSN_iris' E P' P e Q v:
+    {{ P }} e {{ r, P' r }} →
+    (∀ w, {{ P' w }} (fill E (EVal w)) {{ERR: Q w}}) →
+    {{ P }} (fill E e) {{ERR: Q v}}.
+  Proof.
+    intros.
+    specialize (H0 v).
+    unfold hoare in *.
+    intro.
+    eapply iEntails_trans.
+    2:{ apply post_ctxS. }
+    eapply iEntails_trans.
+    - apply H0.
+    - eapply post_mono.
+      + apply H.
+      + apply iEntails_refl.
+  Qed.
+
   Lemma hoare_ctxSN E P' v P e Q:
     {{ P }} e {{ r,  ⌜ r = v ⌝ ∗ P' r }} →
     {{ P' v }} (fill E (EVal v)) {{ERR: Q }} →
@@ -997,6 +1015,168 @@ Section hoare.
     subst e'.
     apply post_ctxN.
   Qed.
+
+  Section CTX.
+    (* Here we have presented 3 versions of the context rule where one would have done.
+       
+       Why is this? Can we have a general context rule that would imply the others?
+
+       In  hoare_ctxS' we are required to be explicit about the resulting value v of the
+       inner computation.
+
+       {{ P }} e {{ r,  ⌜ r = v ⌝ ∗ P' r }} →
+       {{ P' v }} (fill E (EVal v)) {{ r, Q r}} →
+       {{ P }} (fill E e) {{ r, Q r }}.
+       
+       In hoare_ctxS_iris instead we are not, the universal quantification on the value
+       filling the hole of the context guarantees us that any value will do.
+       
+       {{ P }} e {{ r, P' r}} →
+       (∀ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r}}) →
+       {{ P }} (fill E e) {{ r, Q r }}.
+
+       This rule though is not what we would expect for incorrectness logic.
+       Consider this context K ≝ let x = ⬜ in if x ≥ 1 then x else error.
+
+       We know that K[n] has valid triples {{ n ∈ N }} K[n] {{ r, r ≥ 1 }}
+       and {{ n ∈ N }} K[n] {{ERR: n = 0}} but using this second rule we cannot
+       prove the first triple.
+       
+       The result assertion r ≥ 1 cannot be reached when we substitute n = 0
+       in the context and thefere it's not true that the intermediate triple
+       (∀ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r}}) holds.
+
+       This has happened because there can be two triples for the same program,
+       one for correct termination and one for erroneous but we can only express
+       this rule for a ``same kind combination''.
+
+       While this rule is sound it is overly restrictive and does not yield the
+       desired results for programs that may fault.
+
+       It is true thought that we could restrict the triples for K to be
+       {{ n ≥ 1 }} K[n] {{ r, r ≥ 1 }} and {{ n = 0 }} K[n] {{ERR: n = 0}}
+       like we would do in correctness logic but this still does not make
+       the rule perform as expected.
+
+       We are now required to prove (∀ n, {{ n ≥ 1 }} K[n] {{ r, r ≥ 1 }})
+       which means to also prove that the triple
+       {{ 0 ≥ 1 }} K[0] {{ r, r ≥ 1 }} holds.
+
+       This triple is though not provable in incorrectness logic as the
+       presumption 0 ≥ 1 ⊢ False. As there is no state satisfying the presumption
+       assertion the triple cannot hold. The rule is then not usable and must be changed.
+       
+       The alternative that can make this work is to also have the result assertion
+       use the value w to constrain it in the same way the presumption n ≥ 1 would do in
+       correctness logic. This is a logical consequence of the {{ P }} e {{ r, False }}
+       triple be the vacuous one. We can recover the idea of controlling which values
+       w we will allow in our context by having Q w r ⊢ False when w is not accepted.
+
+       {{ P }} e {{ r, P' r }} →
+       (∀ w, {{ P' w }} (fill E (EVal w)) {{ r, Q w r}}) →
+       {{ P }} (fill E e) {{ r, Q v r }}.
+
+       This means that now the assertion (∀ w, {{ P' w }} (fill E (EVal w)) {{ r, Q w r}})
+       is provable and we can recover the Iris context rule.
+
+       {{ P }} e {{ r, r ∈ N }} →
+       ∀ w, {{ w ∈ N }} K[w] {{ r, r ≥ 1 ∧ w ≥ 1 }} →
+       {{ P }} K[e] {{ r, r ≥ 1 ∧ v ≥ 1 }}
+
+       This leaves us with a universally quantified variable v which is not bound in the
+       result assertion of our K[e] program. This inconvenience is required to recover
+       the Iris rule.
+
+       Another important point is that both the hoare_ctx rule and the hoare_ctxS_iris'
+       rule share this universally quantified v but the position in which is used is
+       different.
+
+       We can now prove that the hoare_ctx using the hoare_ctxS_iris'.
+     *)
+
+    Lemma iris_to_ctxS E (Φ : val → Prop) P' P e Q v:
+      {{ P }} e {{ r, ⌜ Φ r ⌝ ∗ P' r }} →
+      {{ ⌜ Φ v ⌝ ∗ P' v }} (fill E (EVal v)) {{ r, Q r }} →
+      {{ P }} (fill E e) {{ r , Q r }}.
+    Proof.
+      intros.
+      eapply hoare_cons.
+      - apply iEntails_refl.
+      - (* thanks to the v we can always introduce v = v as part of the
+           result assertion which means we can later on use it to constrain
+           the value w with the hoare_ctxS_iris' rule *)
+        intro.
+        eapply iEntails_trans.
+        apply iSep_emp_l.
+        apply iSep_mono.
+        apply (iPure_intro (v = v)).
+        reflexivity.
+        apply iEntails_refl.
+      - eapply (hoare_ctxS_iris'
+                E
+                (λ r, ⌜ Φ r ⌝ ∗ P' r)
+                P
+                e
+                (λ w, λ r, ⌜ w = v ⌝ ∗ Q r)
+                v
+             )%S.
+        + assumption.
+        + intro.
+          apply hoare_introS.
+          intros.
+          rewrite H1.
+          assumption.
+    Qed.
+
+    Lemma iris_to_ctxSN E P' v P e Q:
+      {{ P }} e {{ r, ⌜ r = v ⌝ ∗ P' r }} →
+      {{ P' v }} (fill E (EVal v)) {{ERR: Q }}→
+      {{ P }} (fill E e) {{ERR: Q }}.
+    Proof.
+      intros.
+       eapply hoare_consN.
+      - apply iEntails_refl.
+      - (* thanks to the v we can always introduce v = v as part of the
+           result assertion which means we can later on use it to constrain
+           the value w with the hoare_ctxS_iris' rule *)
+        intro.
+        eapply iEntails_trans.
+        apply iSep_emp_l.
+        apply iSep_mono.
+        apply (iPure_intro (v = v)).
+        reflexivity.
+        apply iEntails_refl.
+      - eapply (hoare_ctxSN_iris'
+                  E
+                  (λ r, ⌜ r = v ⌝ ∗ P' r)
+                  P
+                  e
+                  (λ r, ⌜ r = v ⌝ ∗ Q)
+                  v)%S.
+        + assumption.
+        + intros.
+          apply hoare_introN.
+          intros.
+          rewrite H1.
+          (* here the problem is I can't take things out of the presumption,
+             unless I can rewrite everything in wand form and this should be way
+             faster instead. *)
+          unfold hoare_err in *.
+          intros ????.
+          specialize (H0 m H2 mf H3) as [m' [e' (? & ? & ? & ?)]].
+          exists m', e'.
+          split; auto.
+          split.
+          * exists ∅, m'; split; auto.
+            iUnfold; split; auto.
+            split; auto.
+            split.
+            -- rewrite left_id_L. reflexivity.
+            -- apply map_disjoint_empty_l.
+          * split; auto.
+    Qed.    
+    
+  End CTX.
 
   Lemma hoare_pure_step e' P e Q:
     pure_step e e' →
