@@ -1207,7 +1207,7 @@ Section hoare.
   Qed.
 
   (* Derived rules *)
-  Lemma hoare_let P' P Q e1 e2 s v:
+  Lemma hoare_let P' v P Q e1 e2 s:
     {{ P }} e1 {{ r, ⌜ r = v ⌝ ∗ P' r }} →
     {{ P' v }} (subst s v e2) {{ r, Q r }} →
     {{ P }} ELet s e1 e2 {{ r, Q r }}.
