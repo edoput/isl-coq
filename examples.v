@@ -551,15 +551,141 @@ Qed.
 
 End RandomFree.
 
-Lemma foo :
-    hoare (emp)%S (ELoad (EAlloc (EVal (VNat 10)))) (λ r, ⌜ r = VNat 10 ⌝ ∗ (3 ↦ VNat 10))%S.
+Section DoubleFree.
+
+  (* In this section we will look at a double-free error for the program
+
+     e :=
+       let x = ref 10 in
+         if amb = 0 then
+            free x
+         else
+            ()
+         ;
+         free x
+
+    this program might error but can also step through safely
+
+    the two triples we are interested in proving are
+
+    {{ emp }} e {{ x. ∃ l, x = VUnit ∗ l ↦ ⊥ }}
+    {{ emp }} e {{ERR: ∃ l, l ↦ ⊥ }}
+
+*)
+
+Definition e :=
+  (ELet "x" (EAlloc (EVal (VNat 10)))
+                      (ESeq
+                         (EIf (EOp EqOp (EAmb) (EVal (VNat 0)))
+                              (EFree (EVar "x"))
+                              (EVal (VUnit)))
+                         (EFree (EVar "x")))).
+
+Lemma e_safe :
+  hoare (emp)%S e (λ v : val, ∃ l, ⌜ v = VUnit ⌝ ∗ l ↦ ⊥)%S.
 Proof.
-  eapply (hoare_ctxS ([LoadCtx])).
-  - apply hoare_alloc1.
+  unfold e.
+  rewrite <- hoare_exists_forallS.
+  intro.
+  eapply (hoare_let
+            (λ r : val, ∃ x, ⌜ r = (VLoc x) ⌝ ∗ x ↦ VNat 10)
+         (* here I can specify the existential variable value *)
+            (VLoc x)
+         )%S.
+  - apply hoare_introS; intros.
+    apply hoare_alloc1'.
   - simpl.
-    apply hoare_loadS.
+    eapply hoare_seqS.
+    + (* in the first part of our sequence we take the false continuation *)
+      eapply (hoare_if_false
+                (λ r, ∃ x0, ⌜ VLoc x = VLoc x0 ⌝ ∗ x0 ↦ (VNat 10))
+             )%S.
+      * eapply hoare_cons.
+        -- apply iSep_emp_l_inv.
+        -- intro; apply iEntails_refl.
+        -- simpl.
+           apply hoare_frame_r.
+           eapply (hoare_ctxS' [OpCtxL EqOp (EVal (VNat 0))] (VNat 1) (λ _, emp))%S.
+           ++ eapply hoare_cons.
+              ** apply iEntails_refl.
+              ** intro. apply iSep_emp_r_inv.
+              ** apply hoare_amb.
+           ++ simpl.
+              eapply hoare_cons.
+              ** apply iEntails_refl.
+              ** intro.
+                 apply iSep_emp_r.
+              ** simpl.
+                 apply hoare_op.
+                 auto.
+      * instantiate (1 := (λ _, ∃ x0 : nat, ⌜ VLoc x = VLoc x0 ⌝ ∗ x0 ↦ VNat 10)%S).
+        eapply hoare_cons.
+        -- apply iSep_emp_l_inv.
+        -- intro; apply iEntails_refl.
+        -- simpl.
+           apply hoare_frame_r.
+           apply hoare_val.
+    + simpl.
+      eapply hoare_cons.
+      * apply iExists_intro.
+      * intro. apply iEntails_refl.
+      * instantiate (1 := x).
+        eapply hoare_cons.
+        -- eapply iEntails_trans.
+           2: { apply iSep_mono.
+                ++ auto using iPure_intro.
+                ++ apply iEntails_refl.
+           }
+           apply iSep_emp_l.
+        -- intro. apply iEntails_refl.
+        -- simpl.
+           apply hoare_freeS.
 Qed.
 
+Lemma e_err:
+  hoare_err (emp)%S e (∃ l, l ↦ ⊥)%S.
+Proof.
+  rewrite <- hoare_exists_forallN.
+  intro.
+  unfold e.
+  eapply hoare_letN.
+  - eapply (hoare_alloc1 x).
+  - simpl.
+    eapply (hoare_seqSN (λ r : val, x ↦ ⊥))%S.
+    + eapply hoare_if_true.
+      * eapply (hoare_ctxS [(OpCtxL EqOp (EVal (VNat 0)))]).
+        eapply (hoare_cons
+                  (emp ∗ x ↦ VNat 10)
+                  (λ r : val, ⌜ r = VNat 0 ⌝ ∗ x ↦ VNat 10)
+               )%S.
+        -- apply iSep_emp_l_inv.
+        -- intro.
+           apply iEntails_refl.
+        -- apply hoare_frame_r.
+           apply hoare_amb.
+        -- simpl.
+           eapply (hoare_cons
+                     (emp ∗ x ↦ VNat 10)
+                     (λ r: val, ⌜ r = VBool true ⌝ ∗ x ↦ VNat 10)
+                  )%S.
+           ++ apply iSep_mono.
+              apply iPure_intro.
+              reflexivity.
+              apply iEntails_refl.
+           ++ intro.
+              apply iEntails_refl.
+           ++ apply hoare_frame_r.
+              eapply hoare_pure_step.
+              intro.
+              eauto with astep.
+              simpl.
+              apply hoare_val.
+      * simpl.
+        apply hoare_freeS.
+   + apply hoare_freeN.
+Qed.
+
+End DoubleFree.
 Section BIND.
   (* In this section we explore the BIND rule for ISL and what kind of triple we can prove *)
 
