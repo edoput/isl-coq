@@ -892,8 +892,7 @@ Section hoare.
     intro. apply iPure_elim'. intros ->. apply post_val.
   Qed.
 
-
-  Lemma hoare_ctxS E Φ P' P e Q v:
+  Lemma hoare_ctxS E Φ v P' P e Q:
     {{ P }} e {{r, ⌜ Φ r ⌝ ∗ P' r }} →
     {{ ⌜ Φ v ⌝ ∗ P' v }} (fill E (EVal v)) {{ r, Q r}} →
     {{ P }} (fill E e) {{ r, Q r }}.
@@ -910,13 +909,13 @@ Section hoare.
       apply iEntails_refl.
   Qed.
 
-  Lemma hoare_ctxS' E P' P e Q v:
+  Lemma hoare_ctxS' E v P' P e Q:
     {{ P }} e {{ r,  ⌜ r = v ⌝ ∗ P' r }} →
     {{ P' v }} (fill E (EVal v)) {{ r, Q r}} →
     {{ P }} (fill E e) {{ r, Q r }}.
   Proof.
     intros HP H.
-    eapply (hoare_ctxS E (λ r: val,  r = v) P' P e Q  v).
+    eapply (hoare_ctxS E (λ r: val,  r = v) v P' P e Q).
     eassumption.
     eapply hoare_cons.
     - eapply iEntails_trans.
