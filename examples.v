@@ -485,7 +485,71 @@ Proof.
               apply hoare_error.
 Qed.
 
-Definition load_of_alloc := (ELoad (EAlloc (EVal (VNat 10)))).
+Section RandomFree.
+
+  (* in this section we are going to prove the two specs for a program
+     that will free a location l. The location is not specified and though
+     it is not random we have no knowledge on it.
+
+     The objective here is to show that for the same presumption ∃ x y, x ↦ v ∗ y ↦ ⊥
+     we can have two incorrectness specification.
+
+     Moreover it also shows that any constraint on the location l should be
+     put in the result assertion instead of the presumption.
+
+     Instead of using the full ∃ x y, x ↦ v ∗ y ↦ ⊥ presumption we are going
+     to frame them as our location l will be in one of the two singletons at a time
+
+     {{ ∃ x y, x ↦ v ∗ y ↦ ⊥ }} free l {{ r . ∃ x y, x ↦ ⊥ ∗ y ↦ ⊥ ∗ ⌜ x = l ⌝ }}
+     {{ ∃ x y, x ↦ v ∗ y ↦ ⊥ }} free l {{ERR: ∃ x y, x ↦ v ∗ y ↦ ⊥ ∗ ⌜ y = l ⌝ }}
+
+     As we can see both triples will have a pure assertion ⌜ ? = l ⌝ and without
+     that we cannot make. free l only steps through safely if x = l and will error
+     if y = l.
+
+     We cannot make with only ∃ x, x ↦ v because free l needs l ↦ ⊥ to fail and
+     in ISL the negative heap assertion cannot be inferred from just ∃ x, x ↦ v.
+
+     Though we are not gonna prove these complete triples because we will frame them.
+
+     In the first triple we frame y ↦ ⊥ and in the second we frame x ↦ v.
+   *)
+
+Lemma random_free_safe v l:
+  (* here we left out the ∃ y, y ↦ ⊥ as we framed it *)
+  hoare (∃ x, x ↦ v)%S (EFree (EVal (VLoc l))) (λ r: val, ∃ x, ⌜ x = l ⌝ ∗ ⌜ r = VUnit ⌝ ∗ x ↦ ⊥)%S.
+Proof.
+  rewrite <- hoare_exists_forallS.
+  intro.
+  apply hoare_introS.
+  intros.
+  subst x.
+  eapply (hoare_cons (l ↦ v))%S.
+  - apply (iExists_intro l (λ r : nat, r ↦ v))%S.
+  -  intro. apply iEntails_refl.
+  - simpl.
+    apply hoare_freeS.
+Qed.
+
+Lemma random_free_err l:
+  (* if before we framed the x ↦ ⊥ now we can frame the x ↦ v *)
+  hoare_err (∃ x, x ↦ ⊥)%S (EFree (EVal (VLoc l))) (∃ x, ⌜ x = l ⌝ ∗ x ↦ ⊥)%S.
+  (* why the x = l in the result assertion? incorrectness triples here have
+     a frame backing definition so we cannot realy prove there will be an error
+     if our x ≠ l. Then a frame might have a l ↦ v or l ↦ ⊥ assertion. *)
+Proof.
+  rewrite <- hoare_exists_forallN.
+  intro.
+  apply hoare_introN.
+  intros.
+  eapply hoare_consN.
+  - apply (iExists_intro x).
+  - apply iEntails_refl.
+  - subst x.
+    apply hoare_freeN.
+Qed.
+
+End RandomFree.
 
 Lemma foo :
     hoare (emp)%S (ELoad (EAlloc (EVal (VNat 10)))) (λ r, ⌜ r = VNat 10 ⌝ ∗ (3 ↦ VNat 10))%S.
