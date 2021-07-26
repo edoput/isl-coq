@@ -758,7 +758,7 @@ Section hoare.
       eassumption.
   Qed.
 
-  Lemma hoare_cons (P : iProp) (Q : val → iProp) (P' : iProp) e (Q' : val → iProp) :
+  Lemma hoare_consS (P : iProp) (Q : val → iProp) (P' : iProp) e (Q' : val → iProp) :
     (P ⊢ P') →
     (∀ v, (Q' v) ⊢ (Q v)) →
     {{ P }} e {{ v, Q v }} →
@@ -909,7 +909,7 @@ Section hoare.
     intros HP H.
     eapply (hoare_ctxS E (λ r: val,  r = v) v P' P e Q).
     eassumption.
-    eapply hoare_cons.
+    eapply hoare_consS.
     - eapply iEntails_trans.
       + apply (iSep_emp_l (P' v)).
       + apply iSep_mono_l.
@@ -1091,7 +1091,7 @@ Section hoare.
       {{ P }} (fill E e) {{ r , Q r }}.
     Proof.
       intros.
-      eapply hoare_cons.
+      eapply hoare_consS.
       - apply iEntails_refl.
       - (* thanks to the v we can always introduce v = v as part of the
            result assertion which means we can later on use it to constrain
@@ -1371,7 +1371,7 @@ Section hoare.
     {{ P ∗ R }} e {{ r, Q r ∗ R }}.
   Proof.
     intros.
-    eapply hoare_cons.
+    eapply hoare_consS.
     apply iSep_comm.
     intro.
     apply iSep_comm.
