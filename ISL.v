@@ -724,16 +724,30 @@ Section hoare.
       apply (H x v m HQ).
   Qed.
 
-  Lemma hoare_disj P1 P2 Q1 Q2 e :
-    {{ P1 }} e {{ v, Q1 v }} →
-    {{ P2 }} e {{ v, Q2 v }} →
-    {{ P1 ∨ P2 }} e {{ v, Q1 v ∨ Q2 v }}.
+  Lemma hoare_disjS P₁ P₂ Q₁ Q₂ e :
+    {{ P₁ }} e {{ v, Q₁ v }} →
+    {{ P₂ }} e {{ v, Q₂ v }} →
+    {{ P₁ ∨ P₂ }} e {{ v, Q₁ v ∨ Q₂ v }}.
   Proof.
     unfold hoare.
-    intros H1 H2 v. specialize (H1 v). specialize (H2 v).
+    intros ?????. specialize (H v). specialize (H0 v).
     eapply iOr_elim.
-    + eapply post_mono. eapply iOr_intro_l. done.
-    + eapply post_mono. eapply iOr_intro_r. done.
+    - eauto using post_mono, iOr_intro_l.
+    - eauto using post_mono, iOr_intro_r.
+    - assumption.
+  Qed.
+
+  Lemma hoare_disjN P₁ P₂ Q₁ Q₂ e:
+    {{ P₁ }} e {{ERR: Q₁ }} →
+    {{ P₂ }} e {{ERR: Q₂ }} →
+    {{ P₁ ∨ P₂ }} e {{ERR: Q₁ ∨ Q₂ }}.
+  Proof.
+    unfold hoare_err.
+    intros ????.
+    eapply iOr_elim.
+    - eauto using post_mono, iOr_intro_l.
+    - eauto using post_mono, iOr_intro_r.
+    - assumption.
   Qed.
 
   Lemma hoare_exists_forallS {A} P (Q : A -> val -> iProp) e :
