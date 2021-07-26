@@ -687,6 +687,30 @@ Qed.
 
 End DoubleFree.
 Section BIND.
+
+  (* let's do the easy things first: optctx *)
+
+  Definition sum_ctx := [OpCtxL PlusOp (EVal (VNat 1))].
+
+  Lemma reachable m:
+    (hoare emp (fill sum_ctx (EVal m)) (λ v : val, ∃ n, ⌜ v = VNat n ⌝ ∗ ⌜ n > 0 ⌝))%S.
+  Proof.
+    apply hoare_exists_forallS.
+    intro.
+    simpl.
+    eapply hoare_cons.
+    - apply iEntails_refl.
+    - intros.
+      eapply iEntails_trans.
+      + apply iSep_comm.
+      + eapply iEntails_trans.
+        * apply iSep_emp_r.
+        * apply iSep_assoc'.
+    - simpl.
+      apply hoare_introS; intros.
+      apply hoare_op.
+      (* here is the first hiccup; without having m be a natural number I can't go on *)
+  Admitted.
   (* In this section we explore the BIND rule for ISL and what kind of triple we can prove *)
 
   (*
