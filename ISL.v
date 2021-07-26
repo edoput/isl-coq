@@ -702,28 +702,6 @@ Section hoare.
     apply hoare_amb.
   Qed.
 
-  Lemma hoare_exists {A} P (Q : A → val → iProp) e :
-    {{ P }} e {{ v, ∃ x, Q x v }} ↔ ∀ x, {{ P }} e {{ v, Q x v }}.
-  Proof.
-    split.
-    - intro.
-      (* H can be rephrased as "all memories described by (λ v : val, (∃ x: A, Q x v))
-         are reachable from P". Now the ∀ m, ∃ x can be changed to a universal
-         quantification in front, as in our goal.
-
-         This is because for any x that does not satisfy (Q x v) the statement is _false_
-         hence the set of memories described is ∅ and triples such as {{ P }} C {{ ∅ }}
-         are always valid.
-       *)
-      intros x v m HQ.
-      apply (H v).
-      exists x.
-      auto.
-    - intros H v m HQ.
-      destruct HQ as (x & HQ).
-      apply (H x v m HQ).
-  Qed.
-
   Lemma hoare_disjS P₁ P₂ Q₁ Q₂ e :
     {{ P₁ }} e {{ v, Q₁ v }} →
     {{ P₂ }} e {{ v, Q₂ v }} →
