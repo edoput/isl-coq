@@ -524,8 +524,8 @@ Proof.
   apply hoare_introS.
   intros.
   subst x.
-  - apply (iExists_intro l (λ r : nat, r ↦ v))%S.
   eapply (hoare_consS (l ↦ v))%S.
+  - apply (iExists_intro (λ r : nat, r ↦ v))%S.
   -  intro. apply iEntails_refl.
   - simpl.
     apply hoare_freeS.
@@ -543,7 +543,7 @@ Proof.
   apply hoare_introN.
   intros.
   eapply hoare_consN.
-  - apply (iExists_intro x).
+  - apply (iExists_intro (λ x, x ↦ ⊥))%S.
   - apply iEntails_refl.
   - subst x.
     apply hoare_freeN.
