@@ -280,7 +280,7 @@ Proof.
   - eapply (hoare_alloc1 0).
   - simpl.
     eapply (hoare_letN (λ l, 1 ↦ (VLoc 0) ∗ 0 ↦ (VNat 0)))%S.
-    + eapply hoare_cons.
+    + eapply hoare_consS.
       apply iSep_emp_l_inv.
       intro. apply iSep_assoc.
       simpl.
@@ -290,19 +290,19 @@ Proof.
       eapply hoare_consN.
       apply iSep_comm. apply iEntails_refl.
       eapply (hoare_letN (λ v, 0 ↦ VNat 0 ∗ 1 ↦ VLoc 0)%S).
-      * eapply hoare_cons.
+      * eapply hoare_consS.
         apply iEntails_refl.
         intro. eapply iEntails_trans.
         apply iSep_comm.
         apply iSep_assoc'.
         apply hoare_frame_l.
-        eapply hoare_cons. apply iEntails_refl.
+        eapply hoare_consS. apply iEntails_refl.
         intro. apply iSep_comm. simpl.
         apply hoare_loadS.
       * simpl.
-        eapply (hoare_seqSN (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0)%S (λ l, 0 ↦ ⊥ ∗ 1 ↦ VLoc 2 ∗ 2 ↦ VNat 42)%S ).
+        eapply (hoare_seqSN (λ l, 0 ↦ ⊥ ∗ 1 ↦ VLoc 2 ∗ 2 ↦ VNat 42)%S ).
         -- eapply hoare_let.
-           ++ eapply hoare_cons.
+           ++ eapply hoare_consS.
               apply iSep_emp_r_inv. intro.
               apply iSep_comm. simpl.
               apply (hoare_frame_l (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
@@ -312,19 +312,19 @@ Proof.
               ** eapply hoare_pure_step.
                  intro. eauto with astep.
                  simpl.
-                 eapply hoare_cons.
+                 eapply hoare_consS.
                  apply iSep_emp_r_inv.
                  intro. apply iSep_comm. simpl.
                  apply (hoare_frame_l (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0)%S).
                  apply hoare_val.
               ** simpl.
                  eapply (hoare_let (λ r, 0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
-                 --- eapply hoare_cons.
+                 --- eapply hoare_consS.
                      apply iEntails_refl.
                      intro. eapply iEntails_trans.
                      apply iSep_comm.  apply iSep_assoc'. simpl.
                      apply hoare_frame_l.
-                     eapply hoare_cons.
+                     eapply hoare_consS.
                      apply iEntails_refl.
                      intro. apply iSep_comm. simpl.
                      apply hoare_loadS.
@@ -332,13 +332,13 @@ Proof.
                      eapply (hoare_seqS
                                (λ l, 0 ↦ ⊥ ∗ 1 ↦ VLoc 0)
                                (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
-                     +++ eapply hoare_cons.
+                     +++ eapply hoare_consS.
                          apply iEntails_refl.
                          intro. apply iSep_assoc. simpl.
                          apply hoare_frame_r.
                          apply hoare_freeS.
                      +++ eapply (hoare_let (λ l, 0 ↦ ⊥ ∗ 1 ↦ VLoc 0 ∗ 2 ↦ VNat 42))%S.
-                         *** eapply hoare_cons.
+                         *** eapply hoare_consS.
                              eapply iEntails_trans.
                              2: { apply iSep_emp_r_inv. }
                              apply iSep_assoc.
@@ -349,23 +349,23 @@ Proof.
                              apply iSep_assoc'.
                              apply iEntails_refl.
                              eapply (hoare_frame_l (0 ↦ ⊥))%S.
-                             eapply hoare_cons.
+                             eapply hoare_consS.
                              apply iEntails_refl.
                              intro. apply iSep_assoc'. simpl.
                              apply hoare_frame_l.
-                             eapply hoare_cons.
+                             eapply hoare_consS.
                              apply iEntails_refl.
                              intro. apply iSep_comm. simpl.
                              apply (hoare_alloc1 2).
                          *** simpl.
-                             eapply hoare_cons.
+                             eapply hoare_consS.
                              apply iSep_assoc'.
                              intro.
                              eapply iEntails_trans.
                              apply iSep_assoc.
                              apply iSep_assoc.
                              apply hoare_frame_r.
-                             eapply hoare_cons.
+                             eapply hoare_consS.
                              apply iEntails_refl.
                              intro.
                              eapply iEntails_trans.
@@ -374,7 +374,7 @@ Proof.
                              apply iSep_comm.
                              apply iSep_assoc'. simpl.
                              apply hoare_frame_l.
-                             eapply hoare_cons.
+                             eapply hoare_consS.
                              apply iEntails_refl.
                              intro. apply iSep_comm.
                              apply hoare_storeS.
@@ -436,7 +436,7 @@ Proof.
   - apply (hoare_alloc1 n).
   - simpl.
     eapply (hoare_letN (λ l, n ↦ VNat 3 ∗ m ↦ VNat 3)%S).
-    + eapply hoare_cons.
+    + eapply hoare_consS.
       * apply iSep_emp_r_inv.
       * intro.
         eapply iEntails_trans.
@@ -444,7 +444,7 @@ Proof.
         apply iSep_assoc'.
       * simpl.
         eapply (hoare_frame_l (n ↦ VNat 3)%S).
-        eapply hoare_cons.
+        eapply hoare_consS.
         -- apply iEntails_refl.
         -- intro. apply iSep_comm.
         -- simpl.
@@ -452,7 +452,7 @@ Proof.
     + simpl.
       apply (hoare_ctxSN [(IfCtx (EVal VUnit) EError)] (λ r, n ↦ VNat 3 ∗ m ↦ VNat 3)%S (VBool false)).
       * destruct (Nat.eq_dec n m).
-        -- eapply hoare_cons.
+        -- eapply hoare_consS.
              ++ apply iEntails_refl.
              ++ intro.
                 eapply iEntails_trans.
@@ -467,7 +467,7 @@ Proof.
                 auto.
         -- eapply hoare_pure_step.
            ++ intro. eauto with astep.
-           ++ eapply hoare_cons.
+           ++ eapply hoare_consS.
               ** apply iSep_emp_l_inv.
               ** intro. apply iEntails_refl.
               ** apply hoare_frame_r.
@@ -524,8 +524,8 @@ Proof.
   apply hoare_introS.
   intros.
   subst x.
-  eapply (hoare_cons (l ↦ v))%S.
   - apply (iExists_intro l (λ r : nat, r ↦ v))%S.
+  eapply (hoare_consS (l ↦ v))%S.
   -  intro. apply iEntails_refl.
   - simpl.
     apply hoare_freeS.
@@ -600,18 +600,18 @@ Proof.
       eapply (hoare_if_false
                 (λ r, ∃ x0, ⌜ VLoc x = VLoc x0 ⌝ ∗ x0 ↦ (VNat 10))
              )%S.
-      * eapply hoare_cons.
+      * eapply hoare_consS.
         -- apply iSep_emp_l_inv.
         -- intro; apply iEntails_refl.
         -- simpl.
            apply hoare_frame_r.
            eapply (hoare_ctxS' [OpCtxL EqOp (EVal (VNat 0))] (VNat 1) (λ _, emp))%S.
-           ++ eapply hoare_cons.
+           ++ eapply hoare_consS.
               ** apply iEntails_refl.
               ** intro. apply iSep_emp_r_inv.
               ** apply hoare_amb.
            ++ simpl.
-              eapply hoare_cons.
+              eapply hoare_consS.
               ** apply iEntails_refl.
               ** intro.
                  apply iSep_emp_r.
@@ -619,18 +619,18 @@ Proof.
                  apply hoare_op.
                  auto.
       * instantiate (1 := (λ _, ∃ x0 : nat, ⌜ VLoc x = VLoc x0 ⌝ ∗ x0 ↦ VNat 10)%S).
-        eapply hoare_cons.
+        eapply hoare_consS.
         -- apply iSep_emp_l_inv.
         -- intro; apply iEntails_refl.
         -- simpl.
            apply hoare_frame_r.
            apply hoare_val.
     + simpl.
-      eapply hoare_cons.
+      eapply hoare_consS.
       * apply iExists_intro.
       * intro. apply iEntails_refl.
       * instantiate (1 := x).
-        eapply hoare_cons.
+        eapply hoare_consS.
         -- eapply iEntails_trans.
            2: { apply iSep_mono.
                 ++ auto using iPure_intro.
@@ -654,7 +654,7 @@ Proof.
     eapply (hoare_seqSN (λ r : val, x ↦ ⊥))%S.
     + eapply hoare_if_true.
       * eapply (hoare_ctxS [(OpCtxL EqOp (EVal (VNat 0)))]).
-        eapply (hoare_cons
+        eapply (hoare_consS
                   (emp ∗ x ↦ VNat 10)
                   (λ r : val, ⌜ r = VNat 0 ⌝ ∗ x ↦ VNat 10)
                )%S.
@@ -664,7 +664,7 @@ Proof.
         -- apply hoare_frame_r.
            apply hoare_amb.
         -- simpl.
-           eapply (hoare_cons
+           eapply (hoare_consS
                      (emp ∗ x ↦ VNat 10)
                      (λ r: val, ⌜ r = VBool true ⌝ ∗ x ↦ VNat 10)
                   )%S.
@@ -698,7 +698,7 @@ Section BIND.
     apply hoare_exists_forallS.
     intro.
     simpl.
-    eapply hoare_cons.
+    eapply hoare_consS.
     - apply iEntails_refl.
     - intros.
       eapply iEntails_trans.
@@ -744,7 +744,7 @@ Section BIND.
              )%S.
       + admit. (* the assertion must change place from presumption to result so I can use hoare_intro *)
       + simpl.
-        eapply hoare_cons.
+        eapply hoare_consS.
         * apply iEntails_refl.
         * intro.
           apply iSep_comm.
@@ -767,7 +767,7 @@ Section BIND.
       intro.
       simpl.
       eapply (hoare_letN (λ r, emp))%S.
-      + eapply hoare_cons.
+      + eapply hoare_consS.
         * apply iEntails_refl.
         * intro.
           apply iSep_emp_r_inv.
