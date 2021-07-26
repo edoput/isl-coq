@@ -735,13 +735,7 @@ Section BIND.
       simpl.
       eapply (hoare_let
                 (λ r, emp)
-                ⌜ w = VNat n ⌝
-                (λ r : val, (⌜ r = VNat n ⌝ ∗ ⌜ 1 ≤ n ⌝))
-                (EVal w)
-                (EIf (EOp LeOp (EVal (VNat 1)) (EVar "x")) (EVar "x") (EError))
-                "x"
-                (VNat n)
-             )%S.
+                (VNat n))%S.
       + admit. (* the assertion must change place from presumption to result so I can use hoare_intro *)
       + simpl.
         eapply hoare_consS.
