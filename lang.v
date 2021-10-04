@@ -75,7 +75,7 @@ Fixpoint subst (x : string) (w : val) (e : expr) : expr :=
   end.
 
 Inductive either :=
-  | Value: val -> either
+  | Value: val → either
   | Reserved : either.
 
 Notation mem := (gmap nat either).
