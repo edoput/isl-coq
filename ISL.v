@@ -815,8 +815,8 @@ Section hoare.
     apply post_frame.
   Qed.
 
-  Lemma hoare_wandS P Q e:
-    {{ P }} e {{ v, Q }} ↔ (∀ R, {{ R }} e {{ v, Q  ∗ (P -∗ R) }}).
+  Lemma hoare_wandS Q P e:
+    {{ P }} e {{ v, Q v }} ↔ (∀ R, {{ R }} e {{ v, (Q v) ∗ (P -∗ R) }}).
   Proof.
     unfold hoare.
     split; intros.
@@ -857,7 +857,10 @@ Section hoare.
         * apply iEntails_refl.
         * apply iWand_intro_l.
           apply iSep_emp_r_inv.
-   Qed.
+  Qed.
+
+
+
 
   Lemma hoare_introS (Φ : val → Prop) P e Q:
     (∀ v, Φ v → {{ P }} e {{ r, Q r }}) → {{ P }} e {{ r, ⌜ Φ r ⌝ ∗ Q r}}.
