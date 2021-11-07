@@ -1439,6 +1439,31 @@ Section hoare.
     eauto using hoare_frame_lN.
   Qed.
 
+  Section Wand.
+
+    (* The wand equivalence hoare_wand(S|N) gives us some
+       more work to do. As an example consider it applied to the _free_
+       expression. In the result assertion we have a strange iProp
+
+                   l ↦ ⊥ ∗ ((l ↦ v) -∗ R)
+
+      This means that any heap satisfying this iProp has ⊥ in location l
+      and if extended with a disjoint heap (l ↦ v) then it satisfies R.
+
+      As l ↦ ⊥ we cannot extend it with l ↦ v and still obtain something disjoint.
+
+      Have we broken the wand for this extension of SL assertions?
+     *)
+    Lemma hoare_wand_freeS R l v:
+      {{ R }} (EFree (EVal (VLoc l))) {{ x, (λ x, ⌜ x = VUnit ⌝ ∗ l ↦ ⊥) x ∗ ((l ↦ v) -∗ R) }}.
+    Proof.
+      revert R.
+      erewrite <- hoare_wandS.
+      apply hoare_freeS.
+    Qed.
+
+  End Wand.
+
 End hoare.
 (* this is about evaluation of pure expressions *)
 
