@@ -1532,3 +1532,29 @@ Plan:
 - [ ] Completeness theorem (?)
 
 *)
+Definition unsafe e m :=
+  ∃ m' e', steps e m e' m' ∧ (is_error e' m') ∧ not (is_val e').
+
+Lemma soundness e m:
+  hoare_err iEmp e (iOwn m) → unsafe e ∅.
+Proof.
+  intro.
+  unfold hoare_err in H.
+  unfold unsafe.
+  exists m.
+  specialize (H m).
+  assert (post e iEmp None m)%S.
+  apply H.
+  unfold iOwn. reflexivity.
+  assert (m ##ₘ ∅). { apply map_disjoint_empty_r. }
+  specialize (H0 ∅ H1) as (m' & e' & Hdisj & Hemp & Hsteps & Hnotval & Hnotstep).
+  rewrite right_id in Hnotstep.
+  rewrite ! right_id in Hsteps.
+  iUnfold.
+  subst m'.
+  simpl in *.
+  exists e'.
+  do 2 (split; eauto).
+  unfold is_error.
+  do 2 (split; eauto).
+Qed.
