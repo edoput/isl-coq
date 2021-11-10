@@ -40,9 +40,9 @@ Inductive expr : Type :=
  *)
 
 (* ## Semantics of operators *)
-Definition eval_bin_op (op : bin_op) (v1 v2 : val) : option val :=
-  match op, v1, v2 with
-  | PlusOp, VNat n1, VNat n2 => Some (VNat (n1 + n2))
+Definition eval_bin_op (op : bin_op) (v₁ v₂ : val) : option val :=
+  match op, v₁, v₂ with
+  | PlusOp, VNat n₁, VNat n₂ => Some (VNat (n₁ + n₂))
   | MinusOp, VNat n1, VNat n2 => Some (VNat (n1 - n2))
   | LeOp, VNat n1, VNat n2 => Some (VBool (Nat.leb n1 n2))
   | LtOp, VNat n1, VNat n2 => Some (VBool (Nat.ltb n1 n2))
@@ -91,32 +91,32 @@ Proof.
 Qed.
 
 Inductive head_step : expr → mem → expr → mem → Prop :=
-  | Let_headstep m y e2 v1 :
-     head_step (ELet y (EVal v1) e2) m (subst y v1 e2) m
-  | Seq_headstep m e2 v1 :
-     head_step (ESeq (EVal v1) e2) m e2 m
-  | If_headstep_true m e2 e3 :
-     head_step (EIf (EVal (VBool true)) e2 e3) m e2 m
-  | If_headstep_false m e2 e3 :
-     head_step (EIf (EVal (VBool false)) e2 e3) m e3 m
-  | While_headstep m e1 e2 :
-     head_step (EWhile e1 e2) m (EIf e1 (ESeq e2 (EWhile e1 e2)) (EVal VUnit)) m
-  | Op_headstep m op v1 v2 v :
-     eval_bin_op op v1 v2 = Some v →
-     head_step (EOp op (EVal v1) (EVal v2)) m (EVal v) m
-  | Alloc_headstep m v l:
+  | Let_headstep (m : mem) (y : string) (e : expr) (v : val):
+     head_step (ELet y (EVal v) e) m (subst y v e) m
+  | Seq_headstep (m : mem) (e : expr) (v : val):
+     head_step (ESeq (EVal v) e) m e m
+  | If_headstep_true (m : mem) (e₂ e₃ : expr):
+     head_step (EIf (EVal (VBool true)) e₂ e₃) m e₂ m
+  | If_headstep_false (m : mem) (e₂ e₃ : expr):
+     head_step (EIf (EVal (VBool false)) e₂ e₃) m e₃ m
+  | While_headstep (m : mem) (e₁ e₂ : expr):
+     head_step (EWhile e₁ e₂) m (EIf e₁ (ESeq e₂ (EWhile e₁ e₂)) (EVal VUnit)) m
+  | Op_headstep (m : mem) (op : bin_op) (v v₁ v₂ : val) :
+     eval_bin_op op v₁ v₂ = Some v →
+     head_step (EOp op (EVal v₁) (EVal v₂)) m (EVal v) m
+  | Alloc_headstep (m : mem) (v : val) (l: nat):
      valid_alloc m l →
      head_step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[ l := (Value v) ]> m)
-  | Free_headstep m l v:
+  | Free_headstep (m : mem) (v : val) (l : nat):
      m !! l = Some (Value v) →
      head_step (EFree (EVal (VLoc l))) m (EVal VUnit) (<[l := Reserved ]> m)
-  | Load_headstep m l v :
+  | Load_headstep (m : mem) (v : val) (l : nat):
      m !! l = Some (Value v) →
      head_step (ELoad (EVal (VLoc l))) m (EVal v) m
-  | Store_headstep m l v w:
+  | Store_headstep (m : mem) (v w : val) (l : nat):
      m !! l = Some (Value w) →
      head_step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[ l := (Value v) ]> m)
-  | Amb_headstep m (n : nat):
+  | Amb_headstep (m : mem) (n : nat):
      head_step EAmb m (EVal (VNat n)) m.
 
 (* there is no reduction for incorrect expressions because we want to treat
@@ -126,7 +126,7 @@ Inductive head_step : expr → mem → expr → mem → Prop :=
    EFree (EVal (VLoc l)) as it would be an error.
  *)
 
-Lemma Alloc_fresh_headstep m l v :
+Lemma Alloc_fresh_headstep (m : mem) (v : val) (l : nat):
   l = memfresh m →
   head_step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[ l := (Value v)]> m).
 Proof.
@@ -160,8 +160,8 @@ Inductive ctx_item : Type :=
 
 Notation ctx := (list ctx_item).
 
-Definition fill_item (E : ctx_item) (e : expr) : expr :=
-  match E with
+Definition fill_item (K : ctx_item) (e : expr) : expr :=
+  match K with
   | LetCtx s e2 => ELet s e e2
   | SeqCtx e2 => ESeq e e2
   | OpCtxL op e2 => EOp op e e2
@@ -174,10 +174,10 @@ Definition fill_item (E : ctx_item) (e : expr) : expr :=
   | StoreCtxR v1 => EStore (EVal v1) e
   end.
 
-Fixpoint fill (E : ctx) (e : expr) : expr :=
-  match E with
+Fixpoint fill (K : ctx) (e : expr) : expr :=
+  match K with
   | nil => e
-  | E1 :: E2 => fill_item E1 (fill E2 e)
+  | K₁ :: K₂ => fill_item K₁ (fill K₂ e)
   end.
 
 
@@ -186,18 +186,18 @@ Fixpoint fill (E : ctx) (e : expr) : expr :=
    context items as the AST containing the hole *)
 
 Inductive step : expr → mem → expr → mem → Prop :=
-  | do_step E m1 m2 e1 e2 :
-     head_step e1 m1 e2 m2 →
-     step (fill E e1) m1 (fill E e2) m2.
+  | do_step (K : ctx) (m₁ m₂ : mem) (e₁ e₂ : expr) :
+     head_step e₁ m₁ e₂ m₂ →
+     step (fill K e₁) m₁ (fill K e₂) m₂.
 
 
 (* Any expression can be the target of a _rewrite_ and these list makes
    it a little simpler on the typing. *)
 
-Lemma fill_empty_context e : (fill [] e) = e.
+Lemma fill_empty_context (e : expr) : (fill [] e) = e.
 Proof. auto. Qed.
 
-Lemma step_single e e' m m':
+Lemma step_single (e e' : expr) (m m' : mem):
   head_step e m e' m' → step e m e' m'.
 Proof.
   intro.
@@ -206,145 +206,145 @@ Proof.
   auto using step.
 Qed.
 
-Lemma context_composition e E E': fill E (fill E' e) = fill (E ++ E') e.
+Lemma context_composition (e : expr) (K₁ K₂ : ctx) : fill K₁ (fill K₂ e) = fill (K₁ ++ K₂) e.
 Proof.
-  induction E.
+  induction K₁.
   - auto using app_nil_l, fill_empty_context.
   - simpl. by f_equal.
 Qed.
 
-Lemma step_context e e' m m' E :
-  step e m e' m' → step (fill E e) m (fill E e') m'.
+Lemma step_context (e e' : expr) (m m' : mem) (K : ctx) :
+  step e m e' m' → step (fill K e) m (fill K e') m'.
 Proof.
   intros [].
   rewrite !context_composition.
   auto using step.
 Qed.
 
-Lemma step_prefix e e' m m':
-  step e m e' m' ↔ ∃ E e1 e2, fill E e1 = e ∧ fill E e2 = e' ∧ step e1 m e2 m'.
+Lemma step_prefix (e e' : expr) (m m' : mem):
+  step e m e' m' ↔ ∃ K e₁ e₂, fill K e₁ = e ∧ fill K e₂ = e' ∧ step e₁ m e₂ m'.
 Proof.
   split.
   - intro. inv H. repeat eexists; eauto using step_single.
   - naive_solver (auto using step_context).
 Qed.
 
-Lemma step_error e m m':
+Lemma step_error (e : expr) (m m' : mem):
   ¬ step EError m e m'.
 Proof.
-  intro. inv H. destruct E;[inv H1|destruct c;discriminate].
+  intro. inv H. destruct K;[inv H1|destruct c;discriminate].
 Qed.
 
 (* later on we can define is_error as an expression that does not step anymore
    and to actually get to prove errors about resources we need some lemmas
    to discharge this to assumptions on the heaps *)
 
-Lemma step_alloc v l m:
+Lemma step_alloc (v :val) (l : nat) (m : mem) :
   step (EAlloc (EVal v)) m (EVal (VLoc l)) (<[l:= Value v]> m) ↔ valid_alloc m l.
 Proof.
   split; intro H.
   - inv H.
-    destruct E; asimpl.
+    destruct K; asimpl.
     + by inv H3.
     + destruct c; asimpl.
   - apply step_single. by constructor.
 Qed.
 
-Lemma step_alloc_inv e v m m':
+Lemma step_alloc_inv (e : expr) (v : val) (m m' : mem):
   step (EAlloc (EVal v)) m e m' ↔ ∃ l, e = (EVal (VLoc l)) ∧ valid_alloc m l ∧ m' = <[l := Value v]> m.
 Proof.
   split; intro.
-  - inv H. destruct E.
+  - inv H. destruct K.
     + inv H1. eauto.
-    + destruct c; asimpl. destruct E; asimpl; first inv H1.
+    + destruct c; asimpl. destruct K; asimpl; first inv H1.
       destruct c; asimpl.
   - destruct H as (? & -> & ? & ->).
     eauto using step_single, head_step.
 Qed.
 
-Lemma step_free l m:
+Lemma step_free (l : nat) (m : mem):
  step (EFree (EVal (VLoc l))) m (EVal VUnit) (<[l := Reserved ]> m) ↔ ∃ v, m !! l = (Some (Value v)).
 Proof.
   split; intro.
-  - inv H. destruct E; asimpl. inv H3. eauto. destruct c; asimpl.
+  - inv H. destruct K; asimpl. inv H3. eauto. destruct c; asimpl.
   - destruct H. eauto using step_single, head_step.
 Qed.
 
-Lemma step_free_inv e l m m':
+Lemma step_free_inv (e : expr) (l : nat) (m m': mem):
   step (EFree (EVal (VLoc l))) m e m' ↔ ∃ v, e = (EVal VUnit) ∧ m !! l = (Some (Value v)) ∧ m' = <[ l := Reserved ]> m.
 Proof.
   split.
-  - intro. inv H. destruct E; asimpl.
+  - intro. inv H. destruct K; asimpl.
     + inv H1. eauto.
-    + destruct c; asimpl. destruct E; asimpl. inv H1. destruct c; asimpl.
+    + destruct c; asimpl. destruct K; asimpl. inv H1. destruct c; asimpl.
   - intros [v [-> [Hlookup ->]]].
     apply step_free; eauto.
 Qed.
 
-Lemma step_load l v m:
+Lemma step_load (l : nat) (v : val)  (m : mem):
   step (ELoad (EVal (VLoc l))) m (EVal v) m ↔  m !! l = Some (Value v).
 Proof.
   split; intro.
-  - inv H. destruct E; asimpl. by inv H3. destruct c; asimpl.
+  - inv H. destruct K; asimpl. by inv H3. destruct c; asimpl.
   - eauto using step_single, head_step.
 Qed.
 
-Lemma step_load_inv e l m m':
+Lemma step_load_inv (e : expr) (l : nat) (m m': mem):
   step (ELoad (EVal (VLoc l))) m e m' ↔ ∃ v, e = (EVal v) ∧ m !! l = (Some (Value v)) ∧ m' = m.
 Proof.
   split.
-  - intro. inv H. destruct E; asimpl.
+  - intro. inv H. destruct K; asimpl.
     + inv H1. eauto.
-    + destruct c; asimpl. destruct E; asimpl. inv H1. destruct c; asimpl.
+    + destruct c; asimpl. destruct K; asimpl. inv H1. destruct c; asimpl.
   - intros [v [-> [Hlookup ->]]].
     apply step_load; auto.
 Qed.
 
-Lemma step_store l v m:
+Lemma step_store (l : nat) (v : val) (m : mem):
   step (EStore (EVal (VLoc l)) (EVal v)) m (EVal VUnit) (<[l:= (Value v)]> m) ↔ ∃ w, m !! l = Some (Value w).
 Proof.
   split; intro.
-  - inv H. destruct E; asimpl. inv H3. eauto. destruct c; asimpl.
+  - inv H. destruct K; asimpl. inv H3. eauto. destruct c; asimpl.
   - destruct H. eauto using head_step, step_single.
 Qed.
 
-Lemma step_store_inv l v e m m':
+Lemma step_store_inv (l : nat) (v : val) (e : expr) (m m' : mem):
   step (EStore (EVal (VLoc l)) (EVal v)) m e m' ↔ ∃ w, m !! l = (Some (Value w)) ∧ e = (EVal VUnit) ∧ m' = (<[l:= (Value v)]> m).
 Proof.
    split.
   - intro. inv H.
-    + destruct E; asimpl. { inv H1. eauto. }
-      destruct c; asimpl. destruct E; asimpl. inv H1. destruct c; asimpl.
-      destruct E; asimpl. inv H1. destruct c; asimpl.
+    + destruct K; asimpl. { inv H1. eauto. }
+      destruct c; asimpl. destruct K; asimpl. inv H1. destruct c; asimpl.
+      destruct K; asimpl. inv H1. destruct c; asimpl.
   - intros [w (Hlookup & -> & ->)].
     apply step_store; eauto.
 Qed.
 
-Lemma fill_let s e1 e2 : (fill [(LetCtx s e2)] e1) = (ELet s e1 e2).
+Lemma fill_let (s : string) (e1 e2 : expr) : (fill [(LetCtx s e2)] e1) = (ELet s e1 e2).
 Proof. auto. Qed.
 
-Lemma fill_if t e1 e2 : (fill [(IfCtx e1 e2)] t) = (EIf t e1 e2).
+Lemma fill_if (t e1 e2  : expr): (fill [(IfCtx e1 e2)] t) = (EIf t e1 e2).
 Proof. auto. Qed.
 
-Lemma fill_seq e1 e2 : (fill [(SeqCtx e2)] e1) = (ESeq e1 e2).
+Lemma fill_seq (e1 e2 : expr) : (fill [(SeqCtx e2)] e1) = (ESeq e1 e2).
 Proof. auto. Qed.
 
-Lemma fill_op_l f e1 e2 : (fill [(OpCtxL f e2)] e1) = (EOp f e1 e2).
+Lemma fill_op_l (op : bin_op) (e1 e2 : expr) : (fill [(OpCtxL op e2)] e1) = (EOp op e1 e2).
 Proof. auto. Qed.
 
-Lemma fill_alloc e : (fill [AllocCtx] e) = (EAlloc e).
+Lemma fill_alloc (e : expr) : (fill [AllocCtx] e) = (EAlloc e).
 Proof. auto. Qed.
 
-Lemma fill_free e : (fill [FreeCtx] e) = (EFree e).
+Lemma fill_free (e : expr) : (fill [FreeCtx] e) = (EFree e).
 Proof. auto. Qed.
 
-Lemma fill_load e : (fill [LoadCtx] e) = (ELoad e).
+Lemma fill_load (e : expr) : (fill [LoadCtx] e) = (ELoad e).
 Proof. auto. Qed.
 
-Lemma fill_store_l e1 e2 : (fill [StoreCtxL e2] e1) = (EStore e1 e2).
+Lemma fill_store_l (e1 e2 : expr) : (fill [StoreCtxL e2] e1) = (EStore e1 e2).
 Proof. auto. Qed.
 
-Lemma fill_store_r l e : (fill [StoreCtxR l] e) = (EStore (EVal l) e).
+Lemma fill_store_r (l : val) (e : expr): (fill [StoreCtxR l] e) = (EStore (EVal l) e).
 Proof. auto. Qed.
 
 (* Now for the last part of our reductions we lift the _(one) step_
@@ -358,15 +358,15 @@ Inductive steps : expr → mem → expr → mem → Prop :=
      steps e2 m2 e3 m3 →
      steps e1 m1 e3 m3.
 
-Lemma step_once e1 e2 h1 h2 :
-  step e1 h1 e2 h2 -> steps e1 h1 e2 h2.
+Lemma step_once (e1 e2 : expr) (m1 m2 : mem) :
+  step e1 m1 e2 m2 -> steps e1 m1 e2 m2.
 Proof.
   eauto using steps_step, steps_refl.
 Qed.
 
 (* It did not make sense to have this as a constructor of _steps_
    but having it is a _quality of life improvement_. *)
-Lemma steps_single e e' m m' : head_step e m e' m' → steps e m e' m'.
+Lemma steps_single (e e' : expr) ( m m' : mem) : head_step e m e' m' → steps e m e' m'.
 Proof.
   eauto using step_single, steps.
 Qed.
@@ -379,7 +379,7 @@ execution and the composite expression is just any intermediate step which is no
    Moreover as the only constructors for _steps_ are the _0 step_ and the _put one more step in front_ this is a quality of life improvement. *)
 
 (* composing 0+ steps still yields 0+ steps *)
-Lemma steps_trans e e' e'' h h' h'':
+Lemma steps_trans (e e' e'' : expr) (h h' h'' : mem):
   steps e h e' h' → steps e' h' e'' h'' → steps e h e'' h''.
 Proof.
   intros. induction H, H0; eauto using steps.
@@ -389,8 +389,8 @@ Qed.
 
 (* steps *)
 
-Lemma steps_context E e e' h h' :
-  steps e h e' h' → steps (fill E e) h (fill E e') h'.
+Lemma steps_context (K : ctx) (e e' : expr) (h h' : mem):
+  steps e h e' h' → steps (fill K e) h (fill K e') h'.
 Proof.
   induction 1; eauto using steps_trans, step_context, steps.
 Qed.
@@ -406,8 +406,8 @@ Inductive is_ctx : list ctx_item -> Prop :=
   | is_StoreCtxL e : is_ctx [StoreCtxL e]
   | is_StoreCtxR e : is_ctx [StoreCtxR e].
 
-Lemma steps_contexta E e e' h h' e1 e2 :
-  is_ctx E -> e1 = fill E e -> e2 = fill E e' -> steps e h e' h' → steps e1 h e2 h'.
+Lemma steps_contexta (K : ctx) (e e' : expr) (h h' : mem) (e1 e2 : expr) :
+  is_ctx K → e1 = fill K e → e2 = fill K e' → steps e h e' h' → steps e1 h e2 h'.
 Proof. intros ? -> ->. apply steps_context. Qed.
 
 Create HintDb astep.
@@ -417,37 +417,39 @@ Hint Constructors head_step : astep.
 Hint Constructors steps : astep.
 Hint Constructors is_ctx : astep.
 
-Lemma steps_if_true e1 e2 m : steps (EIf (EVal (VBool true)) e1 e2) m e1 m.
+Lemma steps_if_true (e1 e2 : expr) (m : mem) : steps (EIf (EVal (VBool true)) e1 e2) m e1 m.
 Proof.
   eauto with astep.
 Qed.
 
-Lemma steps_if_true' t e1 e2 m : steps t m (EVal (VBool true)) m →
-                                 steps (EIf t e1 e2) m e1 m.
+Lemma steps_if_true' (t e1 e2 : expr) (m : mem) :
+  steps t m (EVal (VBool true)) m →
+  steps (EIf t e1 e2) m e1 m.
 Proof.
   eauto using steps_trans with astep.
 Qed.
 
-Lemma steps_if_false e1 e2 m : steps (EIf (EVal (VBool false)) e1 e2) m e2 m.
+Lemma steps_if_false (e1 e2 : expr) (m : mem) : steps (EIf (EVal (VBool false)) e1 e2) m e2 m.
 Proof.
   eauto with astep.
 Qed.
 
-Lemma steps_if_false' t e1 e2 m : steps t m (EVal (VBool false)) m →
-                                 steps (EIf t e1 e2) m e2 m.
+Lemma steps_if_false' (t e1 e2 : expr) (m : mem) :
+  steps t m (EVal (VBool false)) m →
+  steps (EIf t e1 e2) m e2 m.
 Proof.
   eauto using steps_trans with astep.
 Qed.
 
 (* as long as there is no errors when evaluating the binding [(s e1)] then
    we know that the value of v can be substituted along in expression e2 *)
-Lemma steps_let_val e m s (v : val):
+Lemma steps_let_val (e : expr) (m : mem) (s : string) (v : val):
   steps (ELet s (EVal v) e) m (subst s v e) m.
 Proof.
   eauto with astep.
 Qed.
 
-Lemma steps_let_val' e1 e2 m m' s (v : val):
+Lemma steps_let_val' (e1 e2 : expr) (m m' : mem) (s : string) (v : val):
   steps e1 m (EVal v) m' → steps (ELet s e1 e2) m (subst s v e2) m'.
 Proof.
   intro.
@@ -455,13 +457,13 @@ Proof.
   simpl. eauto with astep.
 Qed.
 
-Lemma steps_seq_val e e' v m m':
+Lemma steps_seq_val (e e' : expr) (v : val) (m m' : mem):
   steps e m e' m' → steps (ESeq (EVal v) e) m e' m'.
 Proof.
   eauto with astep.
 Qed.
 
-Lemma steps_seq_val' e e' e'' m m' m'' (v : val):
+Lemma steps_seq_val' (e e' e'' : expr) (m m' m'' : mem) (v : val):
   steps e m (EVal v) m' → steps e' m' e'' m'' → steps (ESeq e e') m e'' m''.
 Proof.
   intros.
@@ -470,7 +472,7 @@ Proof.
   - eauto with astep.
 Qed.
 
-Lemma steps_alloc_val e m m' v l:
+Lemma steps_alloc_val (e : expr) (m m' : mem) (v : val) (l : nat):
   valid_alloc m' l →
   steps e m (EVal v) m' → steps (EAlloc e) m (EVal (VLoc l)) (<[l:=(Value v)]> m').
 Proof.
@@ -482,7 +484,7 @@ Proof.
   eauto with astep.
 Qed.
 
-Lemma steps_free_val e m m' l v:
+Lemma steps_free_val (e : expr) (m m' : mem) (l : nat) (v : val):
    m' !! l = Some (Value v) →
   steps e m (EVal (VLoc l)) m' → steps (EFree e) m (EVal VUnit) (<[ l := Reserved ]> m').
 Proof.
@@ -494,7 +496,7 @@ Proof.
   eauto with astep.
 Qed.
 
-Lemma steps_load_val e m m' l v:
+Lemma steps_load_val (e : expr) (m m' : mem) (l : nat) (v : val):
   m' !! l = Some (Value v) →
   steps e m (EVal (VLoc l)) m' → steps (ELoad e) m (EVal v) m'.
 Proof.
@@ -506,7 +508,7 @@ Proof.
   eauto with astep.
 Qed.
 
-Lemma steps_store_val e e' m m' m'' l v w:
+Lemma steps_store_val (e e' : expr) (m m' m'' : mem) (l : nat) (v w : val):
   m'' !! l = Some (Value w) →
   steps e m (EVal (VLoc l)) m' →
   steps e' m' (EVal v) m'' →
@@ -527,14 +529,14 @@ Proof.
 Qed.
 
 
-Definition is_val e :=
+Definition is_val (e : expr) :=
   match e with
   | EVal _ => true
   | _ => false
   end.
 
 (* our expression is an error when we cannot step anymore in the reduction *)
-Definition is_error e h := not (is_val e) ∧ ∀ e' h', not (step e h e' h').
+Definition is_error (e : expr) (m : mem) := not (is_val e) ∧ ∀ e' m', not (step e m e' m').
 
 (* to unify the two definitions of wp/ewp later on we rely on this new predicate *)
 Definition is_error_or_val (v : option val) (e : expr) (m : mem): Prop :=
@@ -551,51 +553,51 @@ end.
    reducing in contexes.
 *)
 
-Lemma head_step_fill_item_val a e e' h h' :
-  head_step (fill_item a e) h e' h' → is_val e.
+Lemma head_step_fill_item_val (K : ctx_item) (e e' : expr) (m m' : mem) :
+  head_step (fill_item K e) m e' m' → is_val e.
 Proof.
-  destruct a; simpl; intros H; inversion H; done.
+  destruct K; simpl; intros H; inversion H; done.
 Qed.
 
-Lemma fill_item_eq_val a1 a2 e1 e2 :
+Lemma fill_item_eq_val (a1 a2: ctx_item) (e1 e2 : expr) :
   fill_item a1 e1 = fill_item a2 e2 →
   e1 = e2 ∨ is_val e1 ∨ is_val e2.
 Proof.
   destruct a1,a2; simpl; intro; simplify_eq; eauto.
 Qed.
 
-Lemma head_step_not_val e1 e2 h1 h2 :
-  head_step e1 e2 h1 h2 → is_val e1 → False.
+Lemma head_step_not_val (e1 e2 : expr) (h1 h2 : mem) :
+  head_step e1 h1 e2 h2 → is_val e1 → False.
 Proof.
   intros Hs?. by inversion Hs; subst.
 Qed.
 
-Lemma is_val_fill e E :
-  is_val (fill E e) → is_val e.
+Lemma is_val_fill (e : expr) (K : ctx) :
+  is_val (fill K e) → is_val e.
 Proof.
-  destruct E; eauto. by destruct c.
+  destruct K; eauto. by destruct c.
 Qed.
 
-Lemma fill_item_not_val e a :
+Lemma fill_item_not_val (e : expr) (a : ctx_item) :
   ¬ is_val (fill_item a e).
 Proof.
   destruct a; eauto.
 Qed.
 
-Lemma is_error_fill_item e h a :
+Lemma is_error_fill_item (e : expr) (h : mem) (a : ctx_item) :
   is_error e h → is_error (fill_item a e) h.
 Proof.
   intros [Hv Hs].
   split; eauto using fill_item_not_val.
   intros e' h' H. inversion H. clear H. subst.
-  induction E; simpl in *. subst.
+  induction K; simpl in *. subst.
   - eauto using head_step_fill_item_val.
   - apply fill_item_eq_val in H0 as [|[]];
     eauto using is_val_fill, head_step_not_val.
     subst. eapply Hs. constructor. done.
 Qed.
 
-Lemma is_error_fill e h E :
+Lemma is_error_fill (e : expr) (h : mem) (E : ctx) :
   is_error e h → is_error (fill E e) h.
 Proof.
   induction E; simpl; eauto using is_error_fill_item.
