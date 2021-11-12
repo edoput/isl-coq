@@ -43,13 +43,13 @@ Inductive expr : Type :=
 Definition eval_bin_op (op : bin_op) (v₁ v₂ : val) : option val :=
   match op, v₁, v₂ with
   | PlusOp, VNat n₁, VNat n₂ => Some (VNat (n₁ + n₂))
-  | MinusOp, VNat n1, VNat n2 => Some (VNat (n1 - n2))
-  | LeOp, VNat n1, VNat n2 => Some (VBool (Nat.leb n1 n2))
-  | LtOp, VNat n1, VNat n2 => Some (VBool (Nat.ltb n1 n2))
-  | EqOp, VNat n1, VNat n2 => Some (VBool (Nat.eqb n1 n2))
-  | EqOp, VBool n1, VBool n2 => Some (VBool (Bool.eqb n1 n2))
+  | MinusOp, VNat n₁, VNat n₂ => Some (VNat (n₁ - n₂))
+  | LeOp, VNat n₁, VNat n₂ => Some (VBool (Nat.leb n₁ n₂))
+  | LtOp, VNat n₁, VNat n₂ => Some (VBool (Nat.ltb n₁ n₂))
+  | EqOp, VNat n₁, VNat n₂ => Some (VBool (Nat.eqb n₁ n₂))
+  | EqOp, VBool n₁, VBool n₂ => Some (VBool (Bool.eqb n₁ n₂))
   | EqOp, VUnit, VUnit => Some (VBool true) (* new *)
-  | EqOp, VLoc l1, VLoc l2 => Some (VBool (Nat.eqb l1 l2)) (* new *)
+  | EqOp, VLoc l₁, VLoc l₂ => Some (VBool (Nat.eqb l₁ l₂)) (* new *)
   | _, _, _ => None
   end.
 
@@ -59,18 +59,18 @@ Fixpoint subst (x : string) (w : val) (e : expr) : expr :=
   | EAmb => EAmb (* new *)
   | EVal v => EVal v
   | EVar y => if string_dec x y then EVal w else EVar y
-  | ELet y e1 e2 =>
+  | ELet y e₁ e₂ =>
      if string_dec x y
-     then ELet y (subst x w e1) e2
-     else ELet y (subst x w e1) (subst x w e2)
-  | ESeq e1 e2 => ESeq (subst x w e1) (subst x w e2)
-  | EOp op e1 e2 => EOp op (subst x w e1) (subst x w e2)
-  | EIf e1 e2 e3 => EIf (subst x w e1) (subst x w e2) (subst x w e3)
-  | EWhile e1 e2 => EWhile (subst x w e1) (subst x w e2)
+     then ELet y (subst x w e₁) e₂
+     else ELet y (subst x w e₁) (subst x w e₂)
+  | ESeq e₁ e₂ => ESeq (subst x w e₁) (subst x w e₂)
+  | EOp op e₁ e₂ => EOp op (subst x w e₁) (subst x w e₂)
+  | EIf e₁ e₂ e3 => EIf (subst x w e₁) (subst x w e₂) (subst x w e3)
+  | EWhile e₁ e₂ => EWhile (subst x w e₁) (subst x w e₂)
   | EAlloc e => EAlloc (subst x w e)
   | EFree e => EFree (subst x w e)
   | ELoad e => ELoad (subst x w e)
-  | EStore e1 e2 => EStore (subst x w e1) (subst x w e2)
+  | EStore e₁ e₂ => EStore (subst x w e₁) (subst x w e₂)
   | EError => EError
   end.
 
@@ -162,16 +162,16 @@ Notation ctx := (list ctx_item).
 
 Definition fill_item (K : ctx_item) (e : expr) : expr :=
   match K with
-  | LetCtx s e2 => ELet s e e2
-  | SeqCtx e2 => ESeq e e2
-  | OpCtxL op e2 => EOp op e e2
-  | OpCtxR op v1 => EOp op (EVal v1) e
-  | IfCtx e2 e3 => EIf e e2 e3
+  | LetCtx s eₖ => ELet s e eₖ
+  | SeqCtx eₖ => ESeq e eₖ
+  | OpCtxL op eₖ => EOp op e eₖ
+  | OpCtxR op v₁ => EOp op (EVal v₁) e
+  | IfCtx e₂ e₃ => EIf e e₂ e₃
   | AllocCtx => EAlloc e
   | FreeCtx => EFree e
   | LoadCtx => ELoad e
-  | StoreCtxL e2 => EStore e e2
-  | StoreCtxR v1 => EStore (EVal v1) e
+  | StoreCtxL eₖ => EStore e eₖ
+  | StoreCtxR v => EStore (EVal v) e
   end.
 
 Fixpoint fill (K : ctx) (e : expr) : expr :=
@@ -320,16 +320,16 @@ Proof.
     apply step_store; eauto.
 Qed.
 
-Lemma fill_let (s : string) (e1 e2 : expr) : (fill [(LetCtx s e2)] e1) = (ELet s e1 e2).
+Lemma fill_let (s : string) (e₁ e₂ : expr) : (fill [(LetCtx s e₂)] e₁) = (ELet s e₁ e₂).
 Proof. auto. Qed.
 
-Lemma fill_if (t e1 e2  : expr): (fill [(IfCtx e1 e2)] t) = (EIf t e1 e2).
+Lemma fill_if (t e₁ e₂  : expr): (fill [(IfCtx e₁ e₂)] t) = (EIf t e₁ e₂).
 Proof. auto. Qed.
 
-Lemma fill_seq (e1 e2 : expr) : (fill [(SeqCtx e2)] e1) = (ESeq e1 e2).
+Lemma fill_seq (e₁ e₂ : expr) : (fill [(SeqCtx e₂)] e₁) = (ESeq e₁ e₂).
 Proof. auto. Qed.
 
-Lemma fill_op_l (op : bin_op) (e1 e2 : expr) : (fill [(OpCtxL op e2)] e1) = (EOp op e1 e2).
+Lemma fill_op_l (op : bin_op) (e₁ e₂ : expr) : (fill [(OpCtxL op e₂)] e₁) = (EOp op e₁ e₂).
 Proof. auto. Qed.
 
 Lemma fill_alloc (e : expr) : (fill [AllocCtx] e) = (EAlloc e).
@@ -341,7 +341,7 @@ Proof. auto. Qed.
 Lemma fill_load (e : expr) : (fill [LoadCtx] e) = (ELoad e).
 Proof. auto. Qed.
 
-Lemma fill_store_l (e1 e2 : expr) : (fill [StoreCtxL e2] e1) = (EStore e1 e2).
+Lemma fill_store_l (e₁ e₂ : expr) : (fill [StoreCtxL e₂] e₁) = (EStore e₁ e₂).
 Proof. auto. Qed.
 
 Lemma fill_store_r (l : val) (e : expr): (fill [StoreCtxR l] e) = (EStore (EVal l) e).
@@ -353,13 +353,13 @@ Proof. auto. Qed.
 Inductive steps : expr → mem → expr → mem → Prop :=
   | steps_refl m e :
      steps e m e m
-  | steps_step m1 m2 m3 e1 e2 e3 :
-     step e1 m1 e2 m2 →
-     steps e2 m2 e3 m3 →
-     steps e1 m1 e3 m3.
+  | steps_step m₁ m₂ m₃ e₁ e₂ e₃ :
+     step e₁ m₁ e₂ m₂ →
+     steps e₂ m₂ e₃ m₃ →
+     steps e₁ m₁ e₃ m₃.
 
-Lemma step_once (e1 e2 : expr) (m1 m2 : mem) :
-  step e1 m1 e2 m2 -> steps e1 m1 e2 m2.
+Lemma step_once (e₁ e₂ : expr) (m₁ m₂ : mem) :
+  step e₁ m₁ e₂ m₂ -> steps e₁ m₁ e₂ m₂.
 Proof.
   eauto using steps_step, steps_refl.
 Qed.
@@ -397,17 +397,17 @@ Qed.
 
 Inductive is_ctx : list ctx_item -> Prop :=
   | is_LetCtx s e : is_ctx [LetCtx s e]
-  | is_IfCtx e1 e2 : is_ctx [IfCtx e1 e2]
+  | is_IfCtx e₁ e₂ : is_ctx [IfCtx e₁ e₂]
   | is_SeqCtx e : is_ctx [SeqCtx e]
-  | is_OpCtxL e1 e2 : is_ctx [OpCtxL e1 e2]
+  | is_OpCtxL e₁ e₂ : is_ctx [OpCtxL e₁ e₂]
   | is_AllocCtx : is_ctx [AllocCtx]
   | is_FreeCtx : is_ctx [FreeCtx]
   | is_LoadCtx : is_ctx [LoadCtx]
   | is_StoreCtxL e : is_ctx [StoreCtxL e]
   | is_StoreCtxR e : is_ctx [StoreCtxR e].
 
-Lemma steps_contexta (K : ctx) (e e' : expr) (h h' : mem) (e1 e2 : expr) :
-  is_ctx K → e1 = fill K e → e2 = fill K e' → steps e h e' h' → steps e1 h e2 h'.
+Lemma steps_contexta (K : ctx) (e e' : expr) (h h' : mem) (e₁ e₂ : expr) :
+  is_ctx K → e₁ = fill K e → e₂ = fill K e' → steps e h e' h' → steps e₁ h e₂ h'.
 Proof. intros ? -> ->. apply steps_context. Qed.
 
 Create HintDb astep.
@@ -417,40 +417,40 @@ Hint Constructors head_step : astep.
 Hint Constructors steps : astep.
 Hint Constructors is_ctx : astep.
 
-Lemma steps_if_true (e1 e2 : expr) (m : mem) : steps (EIf (EVal (VBool true)) e1 e2) m e1 m.
+Lemma steps_if_true (e₁ e₂ : expr) (m : mem) : steps (EIf (EVal (VBool true)) e₁ e₂) m e₁ m.
 Proof.
   eauto with astep.
 Qed.
 
-Lemma steps_if_true' (t e1 e2 : expr) (m : mem) :
+Lemma steps_if_true' (t e₁ e₂ : expr) (m : mem) :
   steps t m (EVal (VBool true)) m →
-  steps (EIf t e1 e2) m e1 m.
+  steps (EIf t e₁ e₂) m e₁ m.
 Proof.
   eauto using steps_trans with astep.
 Qed.
 
-Lemma steps_if_false (e1 e2 : expr) (m : mem) : steps (EIf (EVal (VBool false)) e1 e2) m e2 m.
+Lemma steps_if_false (e₁ e₂ : expr) (m : mem) : steps (EIf (EVal (VBool false)) e₁ e₂) m e₂ m.
 Proof.
   eauto with astep.
 Qed.
 
-Lemma steps_if_false' (t e1 e2 : expr) (m : mem) :
+Lemma steps_if_false' (t e₁ e₂ : expr) (m : mem) :
   steps t m (EVal (VBool false)) m →
-  steps (EIf t e1 e2) m e2 m.
+  steps (EIf t e₁ e₂) m e₂ m.
 Proof.
   eauto using steps_trans with astep.
 Qed.
 
-(* as long as there is no errors when evaluating the binding [(s e1)] then
-   we know that the value of v can be substituted along in expression e2 *)
+(* as long as there is no errors when evaluating the binding [(s e₁)] then
+   we know that the value of v can be substituted along in expression e₂ *)
 Lemma steps_let_val (e : expr) (m : mem) (s : string) (v : val):
   steps (ELet s (EVal v) e) m (subst s v e) m.
 Proof.
   eauto with astep.
 Qed.
 
-Lemma steps_let_val' (e1 e2 : expr) (m m' : mem) (s : string) (v : val):
-  steps e1 m (EVal v) m' → steps (ELet s e1 e2) m (subst s v e2) m'.
+Lemma steps_let_val' (e₁ e₂ : expr) (m m' : mem) (s : string) (v : val):
+  steps e₁ m (EVal v) m' → steps (ELet s e₁ e₂) m (subst s v e₂) m'.
 Proof.
   intro.
   eapply steps_trans. eapply steps_contexta; [eapply is_LetCtx|..]; eauto.
@@ -559,15 +559,15 @@ Proof.
   destruct K; simpl; intros H; inversion H; done.
 Qed.
 
-Lemma fill_item_eq_val (a1 a2: ctx_item) (e1 e2 : expr) :
-  fill_item a1 e1 = fill_item a2 e2 →
-  e1 = e2 ∨ is_val e1 ∨ is_val e2.
+Lemma fill_item_eq_val (k₁ k₂: ctx_item) (e₁ e₂ : expr) :
+  fill_item k₁ e₁ = fill_item k₂ e₂ →
+  e₁ = e₂ ∨ is_val e₁ ∨ is_val e₂.
 Proof.
-  destruct a1,a2; simpl; intro; simplify_eq; eauto.
+  destruct k₁,k₂ ; simpl; intro; simplify_eq; eauto.
 Qed.
 
-Lemma head_step_not_val (e1 e2 : expr) (h1 h2 : mem) :
-  head_step e1 h1 e2 h2 → is_val e1 → False.
+Lemma head_step_not_val (e₁ e₂ : expr) (m₁ m₂ : mem) :
+  head_step e₁ m₁ e₂ m₂ → is_val e₁ → False.
 Proof.
   intros Hs?. by inversion Hs; subst.
 Qed.
