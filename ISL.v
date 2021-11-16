@@ -54,7 +54,7 @@ Section seplogic.
   Lemma iEntails_trans P Q R : (P ⊢ Q) → (Q ⊢ R) → (P ⊢ R).
   Proof. duh. Qed.
 
-  Lemma iSep_mono_l P1 P2 Q : (P1 ⊢ P2) → P1 ∗ Q ⊢ P2 ∗ Q.
+  Lemma iSep_mono_l P₁ P₂ Q : (P₁ ⊢ P₂) → P₁ ∗ Q ⊢ P₂ ∗ Q.
   Proof. duh. Qed.
 
   Lemma iSep_comm P Q : P ∗ Q ⊢ Q ∗ P.
@@ -111,10 +111,10 @@ Section seplogic.
   Lemma iSep_emp_r_inv P : P ∗ emp ⊢ P.
   Proof. duh. Qed.
 
-  Lemma iSep_mono_r P Q1 Q2 : (Q1 ⊢ Q2) → P ∗ Q1 ⊢ P ∗ Q2.
+  Lemma iSep_mono_r P Q₁ Q₂ : (Q₁ ⊢ Q₂) → P ∗ Q₁ ⊢ P ∗ Q₂.
   Proof. duh. Qed.
 
-  Lemma iSep_mono P1 P2 Q1 Q2 : (P1 ⊢ P2) → (Q1 ⊢ Q2) → P1 ∗ Q1 ⊢ P2 ∗ Q2.
+  Lemma iSep_mono P₁ P₂ Q₁ Q₂ : (P₁ ⊢ P₂) → (Q₁ ⊢ Q₂) → P₁ ∗ Q₁ ⊢ P₂ ∗ Q₂.
   Proof. duh. Qed.
 
   Lemma iSep_assoc' P Q R : (P ∗ Q) ∗ R ⊢ P ∗ (Q ∗ R).
@@ -214,8 +214,8 @@ Abort.
 
 Section primitive_post_rules.
 
-  Lemma post_trivial P e v:
-    @[ False ] ⊢ post e P v.
+  Lemma post_trivial P e 𝜀:
+    @[ False ] ⊢ post e P 𝜀.
   Proof.
     intros m H.
     exfalso.
@@ -223,14 +223,14 @@ Section primitive_post_rules.
     done.
   Qed.
 
-  Lemma post_mono P Q R e v:
-    (P ⊢ Q) → (R ⊢ post e P v) → (R ⊢ post e Q v).
+  Lemma post_mono P Q R e 𝜀:
+    (P ⊢ Q) → (R ⊢ post e P 𝜀) → (R ⊢ post e Q 𝜀).
   Proof.
     intros ??HP????. edestruct HP; naive_solver.
   Qed.
 
-  Lemma post_frame P Q e v :
-    Q ∗ post e P v ⊢ post e (Q ∗ P) v.
+  Lemma post_frame P Q e 𝜀:
+    Q ∗ post e P 𝜀 ⊢ post e (Q ∗ P) 𝜀.
   Proof.
     iUnfold.
     intros mT (m & m' & Hq & Hwp & -> & Hdisj) mf Hdisj'.
@@ -254,8 +254,8 @@ Section primitive_post_rules.
    Interesting enough I have not used the post_mono here or other primitive rules
    except for the wand elimination
   *)
-  Lemma post_wand P R e v :
-    (P -∗ R) ∗ post e P v ⊢ post e R v.
+  Lemma post_wand P R e 𝜀 :
+    (P -∗ R) ∗ post e P 𝜀 ⊢ post e R 𝜀.
   Proof.
     intros m (m1 & m2 & Hm1 & Hm2 & Hm & Hdisj).
     intros mf Hdisj_mf.
@@ -296,8 +296,8 @@ Section primitive_post_rules.
   (* Now on the Iris from the ground up we have seen that the weakest precondition rule
      for the wand and the rule for monotonicity implies the framing so let's try
      and do that also here *)
-  Lemma wand_implies_framing P Q e v :
-    Q ∗ post e P v ⊢ post e (Q ∗ P) v.
+  Lemma wand_implies_framing P Q e 𝜀 :
+    Q ∗ post e P 𝜀 ⊢ post e (Q ∗ P) 𝜀.
   Proof.
     eapply iEntails_trans.
     2: {
@@ -335,13 +335,13 @@ Section primitive_post_rules.
      (post e P (Some w)) ⊢ Φ w →
      post (fill E (EVal w)) (Φ w) v ⊢ post (fill E e) P v.
 *)
-  Lemma post_ctxS E e P v w :
-    post (fill E (EVal w)) (post e P (Some w)) v ⊢ post (fill E e) P v.
+  Lemma post_ctxS E e P 𝜀 w :
+    post (fill E (EVal w)) (post e P (Some w)) 𝜀 ⊢ post (fill E e) P 𝜀.
   Proof.
     intros m H mf Hdisj.
     specialize (H mf Hdisj) as (?&?&Hdisj'&H'&?&?).
     specialize (H' mf Hdisj') as (?&?&?&?&?&?).
-    destruct v; asimpl;
+    destruct 𝜀; asimpl;
     eauto 10 using steps_trans, steps_context.
   Qed.
 
@@ -363,8 +363,8 @@ Section primitive_post_rules.
 
   Definition pure_step (e e' : expr) := ∀ h,  step e h e' h.
 
-  Lemma post_pure_step e e' P v :
-    pure_step e e' → post e' P v ⊢ post e P v.
+  Lemma post_pure_step e e' P 𝜀 :
+    pure_step e e' → post e' P 𝜀 ⊢ post e P 𝜀.
   Proof.
     intros pure m H mf Hdisj.
     specialize (H mf Hdisj) as (?&?&?&?&?&?).
@@ -1246,13 +1246,13 @@ Section hoare.
   Qed.
 
   (* Derived rules *)
-  Lemma hoare_let P' v P Q e1 e2 s:
-    {{ P }} e1 {{ r, @[ r = v ] ∗ P' r }} →
-    {{ P' v }} (subst s v e2) {{ r, Q r }} →
-    {{ P }} ELet s e1 e2 {{ r, Q r }}.
+  Lemma hoare_let P' v P Q e₁ e₂ s:
+    {{ P }} e₁ {{ r, @[ r = v ] ∗ P' r }} →
+    {{ P' v }} (subst s v e₂) {{ r, Q r }} →
+    {{ P }} ELet s e₁ e₂ {{ r, Q r }}.
   Proof.
-    intros H0 H1.
-    eapply (hoare_ctxS' [(LetCtx s e2)]).
+    intros ??.
+    eapply (hoare_ctxS' [(LetCtx s e₂)]).
     eassumption.
     simpl.
     eapply hoare_pure_step.
@@ -1260,13 +1260,13 @@ Section hoare.
     - assumption.
   Qed.
 
-  Lemma hoare_letN P' P Q s e1 e2 v:
-    {{ P }} e1 {{ r, @[ r = v ] ∗ P' r }} →
-    {{ P' v }} (subst s v e2) {{ERR: Q }} →
-    {{ P }} (ELet s e1 e2) {{ERR: Q}}.
+  Lemma hoare_letN P' P Q s e₁ e₂ v:
+    {{ P }} e₁ {{ r, @[ r = v ] ∗ P' r }} →
+    {{ P' v }} (subst s v e₂) {{ERR: Q }} →
+    {{ P }} (ELet s e₁ e₂) {{ERR: Q}}.
   Proof.
-    intros H0 H1.
-    eapply (hoare_ctxSN [(LetCtx s e2)]).
+    intros ??.
+    eapply (hoare_ctxSN [(LetCtx s e₂)]).
     eassumption.
     simpl.
     eapply hoare_pure_stepN.
@@ -1296,13 +1296,13 @@ Section hoare.
     apply post_while.
   Qed.
 
-  Lemma hoare_seqS R P Q e1 e2 v:
-    {{ P }} e1 {{ r, @[ r = v ] ∗ R r }} →
-    {{ R v }} e2 {{ r, Q r }} →
-    {{ P }} (ESeq e1 e2) {{ r, Q r }}.
+  Lemma hoare_seqS R P Q e₁ e₂ v:
+    {{ P }} e₁ {{ r, @[ r = v ] ∗ R r }} →
+    {{ R v }} e₂ {{ r, Q r }} →
+    {{ P }} (ESeq e₁ e₂) {{ r, Q r }}.
   Proof.
     intros.
-    eapply (hoare_ctxS' [(SeqCtx e2)]); eauto.
+    eapply (hoare_ctxS' [(SeqCtx e₂)]); eauto.
     simpl.
     eapply hoare_pure_step.
     2: { eauto. }
@@ -1310,13 +1310,13 @@ Section hoare.
     eauto with astep.
   Qed.
 
-  Lemma hoare_seqS' R P Q e1 e2:
-    {{ P }} e1 {{ r, R }} →
-    {{ R }} e2 {{ r, Q r }} →
-    {{ P }} (ESeq e1 e2) {{ r, Q r }}.
+  Lemma hoare_seqS' R P Q e₁ e₂:
+    {{ P }} e₁ {{ r, R }} →
+    {{ R }} e₂ {{ r, Q r }} →
+    {{ P }} (ESeq e₁ e₂) {{ r, Q r }}.
   Proof.
     intros.
-    eapply (hoare_ctxS_iris [(SeqCtx e2)] (λ _, R) P e1 Q); eauto.
+    eapply (hoare_ctxS_iris [(SeqCtx e₂)] (λ _, R) P e₁ Q); eauto.
     - intro.
       simpl.
       eapply hoare_pure_step.
@@ -1325,30 +1325,30 @@ Section hoare.
       eauto with astep.
   Qed.
 
-  Lemma haore_seqN P Q e1 e2:
-    {{ P }} e1 {{ERR: Q}} →
-    {{ P }} ESeq e1 e2 {{ERR: Q }}.
+  Lemma haore_seqN P Q e₁ e₂:
+    {{ P }} e₁ {{ERR: Q}} →
+    {{ P }} ESeq e₁ e₂ {{ERR: Q }}.
   Proof.
     intros.
-    eapply (hoare_ctxN  [(SeqCtx e2)]); eauto.
+    eapply (hoare_ctxN  [(SeqCtx e₂)]); eauto.
   Qed.
 
-  Lemma hoare_seqSN R P Q e1 e2 v:
-    {{ P }} e1 {{ r , @[ r = v ] ∗ R r }} →
-    {{ R v }} e2 {{ERR: Q }} →
-    {{ P }} ESeq e1 e2 {{ERR: Q }}.
+  Lemma hoare_seqSN R P Q e₁ e₂ v:
+    {{ P }} e₁ {{ r , @[ r = v ] ∗ R r }} →
+    {{ R v }} e₂ {{ERR: Q }} →
+    {{ P }} ESeq e₁ e₂ {{ERR: Q }}.
   Proof.
     intros.
-    eapply (hoare_ctxSN [(SeqCtx e2)]); eauto.
+    eapply (hoare_ctxSN [(SeqCtx e₂)]); eauto.
     simpl.
     eapply hoare_pure_stepN.
     intro. eauto with astep.
     auto.
   Qed.
 
-  Lemma hoare_op op v1 v2 v P:
-    eval_bin_op op v1 v2 = Some v →
-    {{ P }} (EOp op (EVal v1) (EVal v2)) {{ r, @[ r = v ] ∗ P }}.
+  Lemma hoare_op op v₁ v₂ v P:
+    eval_bin_op op v₁ v₂ = Some v →
+    {{ P }} (EOp op (EVal v₁) (EVal v₂)) {{ r, @[ r = v ] ∗ P }}.
   Proof.
     unfold hoare.
     intros.
@@ -1357,51 +1357,51 @@ Section hoare.
     auto using  post_op.
   Qed.
 
-  Lemma hoare_if_true P' P Q t e1 e2:
+  Lemma hoare_if_true P' P Q t e₁ e₂:
     {{ P }} t {{ r, @[ r = VBool true ] ∗ P' r }} →
-    {{ P' (VBool true) }} e1 {{ r, Q r }} →
-    {{ P }} EIf t e1 e2 {{ r, Q r }}.
+    {{ P' (VBool true) }} e₁ {{ r, Q r }} →
+    {{ P }} EIf t e₁ e₂ {{ r, Q r }}.
   Proof.
     intros.
-    eapply (hoare_ctxS' [(IfCtx e1 e2)]); eauto.
+    eapply (hoare_ctxS' [(IfCtx e₁ e₂)]); eauto.
     simpl.
     eapply hoare_pure_step.
     - intro. eauto with astep.
     - assumption.
   Qed.
 
-  Lemma hoare_if_trueN P' P Q t e1 e2:
+  Lemma hoare_if_trueN P' P Q t e₁ e₂:
     {{ P }} t {{ r, @[ r = VBool true ] ∗ P' r }} →
-    {{ P' (VBool true) }} e1 {{ERR: Q }} →
-    {{ P }} EIf t e1 e2 {{ERR: Q }}.
+    {{ P' (VBool true) }} e₁ {{ERR: Q }} →
+    {{ P }} EIf t e₁ e₂ {{ERR: Q }}.
   Proof.
     intros.
-    eapply (hoare_ctxSN [(IfCtx e1 e2)]); eauto.
+    eapply (hoare_ctxSN [(IfCtx e₁ e₂)]); eauto.
     - eapply hoare_pure_stepN; simpl.
       intro. eauto with astep.
       eassumption.
   Qed.
 
-  Lemma hoare_if_false P' P Q t e1 e2:
+  Lemma hoare_if_false P' P Q t e₁ e₂:
     {{ P }} t {{ r, @[ r = VBool false ] ∗ P' r }} →
-    {{ P' (VBool false) }} e2 {{ r, Q r }} →
-    {{ P }} EIf t e1 e2 {{ r, Q r }}.
+    {{ P' (VBool false) }} e₂ {{ r, Q r }} →
+    {{ P }} EIf t e₁ e₂ {{ r, Q r }}.
   Proof.
     intros.
-    eapply (hoare_ctxS' [(IfCtx e1 e2)]); eauto.
+    eapply (hoare_ctxS' [(IfCtx e₁ e₂)]); eauto.
     simpl.
     eapply hoare_pure_step.
     - intro. eauto with astep.
     - assumption.
   Qed.
 
-  Lemma hoare_if_falseN P' P Q t e1 e2:
+  Lemma hoare_if_falseN P' P Q t e₁ e₂:
     {{ P }} t {{ r, @[ r = VBool false ] ∗ P' r }} →
-    {{ P' (VBool false) }} e2 {{ERR: Q }} →
-    {{ P }} EIf t e1 e2 {{ERR: Q }}.
+    {{ P' (VBool false) }} e₂ {{ERR: Q }} →
+    {{ P }} EIf t e₁ e₂ {{ERR: Q }}.
   Proof.
     intros.
-    eapply (hoare_ctxSN [(IfCtx e1 e2)]); eauto.
+    eapply (hoare_ctxSN [(IfCtx e₁ e₂)]); eauto.
     - eapply hoare_pure_stepN; simpl.
       intro. eauto with astep.
       eassumption.
