@@ -154,7 +154,7 @@ Proof.
 Qed.
 
 Lemma step_frame_equiv e m e' m' :
-  step e m e' m' <-> ∀ mf, m' ##ₘ mf -> step e (m ∪ mf) e' (m' ∪ mf).
+  step e m e' m'  ↔ ∀ mf, m' ##ₘ mf -> step e (m ∪ mf) e' (m' ∪ mf).
 Proof.
   split.
   - intros []. rewrite ->head_step_frame_equiv in H.
@@ -164,7 +164,7 @@ Proof.
 Qed.
 
 Lemma step_heap_mono e m e' m' x :
-  step e m e' m' -> m' ##ₘ x -> m ##ₘ x.
+  step e m e' m' → m' ##ₘ x → m ##ₘ x.
 Proof.
   intros []?. destruct H; solve_map_disjoint.
 Qed.
