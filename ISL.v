@@ -381,7 +381,7 @@ Section primitive_post_rules.
     repeat eexists; eauto using steps.
   Qed.
 
-  Lemma post_alloc1 v l :
+  Lemma post_alloc v l :
     l ↦ v ⊢ post (EAlloc (EVal v)) emp (Some (VLoc l)).
   Proof.
     iUnfold.
@@ -396,7 +396,7 @@ Section primitive_post_rules.
       rewrite HH lookup_singleton //.
   Qed.
 
-  Lemma post_alloc2 l v:
+  Lemma post_reuse l v:
     l ↦ v ⊢ post (EAlloc (EVal v)) (l ↦ ⊥) (Some (VLoc l)).
   Proof.
     intros m H mf Hdisj.
@@ -632,7 +632,7 @@ Section hoare.
   Lemma hoare_alloc1_alt l v :
     hoare_alt emp%S (EAlloc (EVal v)) (VLoc l) (l ↦ v)%S.
   Proof.
-    eapply post_alloc1.
+    eapply post_alloc.
   Qed.
 
   Lemma hoare_trivial P e:
@@ -655,16 +655,16 @@ Section hoare.
     assumption.
   Qed.
 
-  Lemma hoare_alloc1 l v:
+  Lemma hoare_alloc l v:
     {{ emp }} (EAlloc (EVal v)) {{ r, @[ r = VLoc l ] ∗ l ↦ v }}.
   Proof.
     intro v'.
     apply iPure_elim.
     intros ->.
-    apply post_alloc1.
+    apply post_alloc.
   Qed.
 
-  Lemma hoare_alloc1' v :
+  Lemma hoare_fresh v :
     {{ emp }} (EAlloc (EVal v)) {{ r, ∃ l, @[ r = VLoc l ] ∗ l ↦ v }}.
   Proof.
     intros v'.
@@ -672,16 +672,16 @@ Section hoare.
     intros l.
     eapply iPure_elim.
     intros ->.
-    eapply post_alloc1.
+    eapply post_alloc.
   Qed.
 
-  Lemma hoare_alloc2 l v :
+  Lemma hoare_reuse l v :
     {{ l ↦ ⊥ }} (EAlloc (EVal v)) {{ r, @[ r = VLoc l ] ∗ l ↦ v }}.
   Proof.
     intros v'.
     eapply iPure_elim.
     intros ->.
-    eapply post_alloc2.
+    eapply post_reuse.
   Qed.
 
   Lemma hoare_amb n :
