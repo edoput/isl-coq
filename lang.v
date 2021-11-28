@@ -536,14 +536,15 @@ Definition is_val (e : expr) :=
   end.
 
 (* our expression is an error when we cannot step anymore in the reduction *)
-Definition is_error (e : expr) (m : mem) := not (is_val e) ∧ ∀ e' m', not (step e m e' m').
+Definition is_error (e : expr) (m : mem) :=
+  not (is_val e) ∧ ∀ e' m', not (step e m e' m').
 
 (* to unify the two definitions of wp/ewp later on we rely on this new predicate *)
 Definition is_error_or_val (v : option val) (e : expr) (m : mem): Prop :=
   match v with
   | None => is_error e m
   | Some v => e = EVal v
-end.
+  end.
 
 (* is_error relies on _step_ to say that an expression does not step
    but we only have an operational semantic for not stepping that works

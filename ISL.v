@@ -188,8 +188,13 @@ Proof.
     by rewrite !right_id_L in H.
 Qed.
 
-Definition post (e : expr) (P : iProp) (v : option val) : iProp :=
-  λ m', ∀ mf, m' ##ₘ mf → (∃ m e', m ##ₘ mf ∧ P m ∧ steps e (m ∪ mf) e' (m' ∪ mf) ∧ is_error_or_val v e' (m' ∪ mf)).
+Definition post (e : expr) (P : iProp) (v : option val) : iProp := λ m', ∀ mf,
+      m' ##ₘ mf →
+      (∃ m e',
+          m ##ₘ mf
+          ∧ P m
+          ∧ steps e (m ∪ mf) e' (m' ∪ mf)
+          ∧ is_error_or_val v e' (m' ∪ mf)).
 
 Definition post' (e : expr) (P : iProp) (v : option val) : iProp :=
   λ m', ∃ m e', P m ∧ steps e m e' m' ∧ is_error_or_val v e' m'.
