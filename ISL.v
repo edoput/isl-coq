@@ -51,7 +51,7 @@ Section seplogic.
   Lemma iEntails_refl P : P ⊢ P.
   Proof. duh. Qed.
 
-  Lemma iEntails_trans P Q R : (P ⊢ Q) → (Q ⊢ R) → (P ⊢ R).
+  Lemma iEntails_trans Q P R : (P ⊢ Q) → (Q ⊢ R) → (P ⊢ R).
   Proof. duh. Qed.
 
   Lemma iSep_mono_l P₁ P₂ Q : (P₁ ⊢ P₂) → P₁ ∗ Q ⊢ P₂ ∗ Q.
@@ -123,7 +123,7 @@ Section seplogic.
   Lemma iWand_intro_l P Q R : (Q ∗ P ⊢ R) → P ⊢ Q -∗ R.
   Proof. duh. Qed.
 
-  Lemma iExist_sep {A} (P : A → iProp) Q : (∃ x, P x) ∗ Q ⊢ ∃ x, P x ∗ Q.
+  Lemma iExists_sep {A} (P : A → iProp) Q : (∃ x, P x) ∗ Q ⊢ ∃ x, P x ∗ Q.
   Proof. duh. Qed.
 
   Lemma iPure_intro (φ : Prop) : φ → emp ⊢ @[ φ ].
@@ -734,6 +734,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_exists_forallS {A} P (Q : A -> val -> iProp) e :
+  Lemma hoare_exists_forallS {A} P (Q : A → val → iProp) e :
     (∀ x, {{ P }} e {{ v, Q x v }}) ↔ {{ P }} e {{ v, ∃ x, Q x v }}.
   Proof.
     unfold hoare.
@@ -1302,6 +1303,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_seqS R P Q e₁ e₂ v:
+  Lemma hoare_seqS R v P Q e₁ e₂:
     {{ P }} e₁ {{ r, @[ r = v ] ∗ R r }} →
     {{ R v }} e₂ {{ r, Q r }} →
     {{ P }} (ESeq e₁ e₂) {{ r, Q r }}.
@@ -1351,13 +1353,13 @@ Section hoare.
     auto.
   Qed.
 
-  Lemma hoare_op op v₁ v₂ v P:
+  Lemma hoare_op op v₁ v₂ v:
     eval_bin_op op v₁ v₂ = Some v →
-    {{ P }} (EOp op (EVal v₁) (EVal v₂)) {{ r, @[ r = v ] ∗ P }}.
+    {{ emp }} (EOp op (EVal v₁) (EVal v₂)) {{ r, @[ r = v ] }}.
   Proof.
     unfold hoare.
     intros.
-    apply iPure_elim.
+    apply iPure_elim'.
     intros ->.
     auto using  post_op.
   Qed.
