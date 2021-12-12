@@ -733,7 +733,6 @@ Section hoare.
     - assumption.
   Qed.
 
-  Lemma hoare_exists_forallS {A} P (Q : A -> val -> iProp) e :
   Lemma hoare_exists_forallS {A} P (Q : A → val → iProp) e :
     (∀ x, {{ P }} e {{ v, Q x v }}) ↔ {{ P }} e {{ v, ∃ x, Q x v }}.
   Proof.
@@ -827,14 +826,14 @@ Section hoare.
     unfold hoare.
     split; intros.
     - eapply iEntails_trans.
-      2:{apply (post_wand P).}
+      2:{apply (post_wand P). }
       eapply iEntails_trans.
       + apply iSep_comm.
       + apply iSep_mono.
         * apply iEntails_refl.
         * auto.
     - eapply iEntails_trans.
-      2:{apply H.}
+      2:{apply H. }
       eapply iEntails_trans.
       + apply iSep_emp_r.
       + apply iSep_mono.
@@ -849,14 +848,14 @@ Section hoare.
     unfold hoare_err.
     split; intros.
     - eapply iEntails_trans.
-      2:{apply (post_wand P).}
+      2:{apply (post_wand P). }
       eapply iEntails_trans.
       + apply iSep_comm.
       + apply iSep_mono.
         * apply iEntails_refl.
         * auto.
     - eapply iEntails_trans.
-      2:{apply H.}
+      2:{apply H. }
       eapply iEntails_trans.
       + apply iSep_emp_r.
       + apply iSep_mono.
@@ -1266,7 +1265,7 @@ Section hoare.
     - assumption.
   Qed.
 
-  Lemma hoare_letN P' P Q s e₁ e₂ v:
+  Lemma hoare_letN P' v P Q s e₁ e₂:
     {{ P }} e₁ {{ r, @[ r = v ] ∗ P' r }} →
     {{ P' v }} (subst s v e₂) {{ERR: Q }} →
     {{ P }} (ELet s e₁ e₂) {{ERR: Q}}.
@@ -1302,7 +1301,6 @@ Section hoare.
     apply post_while.
   Qed.
 
-  Lemma hoare_seqS R P Q e₁ e₂ v:
   Lemma hoare_seqS R v P Q e₁ e₂:
     {{ P }} e₁ {{ r, @[ r = v ] ∗ R r }} →
     {{ R v }} e₂ {{ r, Q r }} →
@@ -1340,7 +1338,7 @@ Section hoare.
     eapply (hoare_ctxN  [(SeqCtx e₂)]); eauto.
   Qed.
 
-  Lemma hoare_seqSN R P Q e₁ e₂ v:
+  Lemma hoare_seqSN R v P Q e₁ e₂:
     {{ P }} e₁ {{ r , @[ r = v ] ∗ R r }} →
     {{ R v }} e₂ {{ERR: Q }} →
     {{ P }} ESeq e₁ e₂ {{ERR: Q }}.
