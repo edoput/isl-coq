@@ -181,7 +181,7 @@ Proof.
   split.
   - induction 1; eauto using steps.
     intros.
-    assert (m2 ##ₘ mf). { eapply steps_heap_mono; eauto. }
+    assert (m₂ ##ₘ mf). { eapply steps_heap_mono; eauto. }
     rewrite ->step_frame_equiv in H.
     eapply steps_step; eauto.
   - intros. specialize (H _ (map_disjoint_empty_r _)).
@@ -1084,7 +1084,7 @@ Section hoare.
        We know that K[n] has valid triples {{ n ∈ N }} K[n] {{ r, r ≥ 1 }}
        and {{ n ∈ N }} K[n] {{ERR: n = 0}} but using this second rule we cannot
        prove the first triple.
-       
+
        The result assertion r ≥ 1 cannot be reached when we substitute n = 0
        in the context and thefere it's not true that the intermediate triple
        (∀ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r}}) holds.
@@ -1108,7 +1108,7 @@ Section hoare.
        This triple is though not provable in incorrectness logic as the
        presumption 0 ≥ 1 ⊢ False. As there is no state satisfying the presumption
        assertion the triple cannot hold. The rule is then not usable and must be changed.
-       
+
        The alternative that can make this work is to also have the result assertion
        use the value w to constrain it in the same way the presumption n ≥ 1 would do in
        correctness logic. This is a logical consequence of the {{ P }} e {{ r, False }}
@@ -1217,8 +1217,8 @@ Section hoare.
             -- rewrite left_id_L. reflexivity.
             -- apply map_disjoint_empty_l.
           * split; auto.
-    Qed.    
-    
+    Qed.
+
   End CTX.
 
   Lemma hoare_pure_step e' P e Q:
