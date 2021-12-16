@@ -170,13 +170,13 @@ Proof.
 Qed.
 
 Lemma steps_heap_mono e m e' m' x :
-  steps e m e' m' -> m' ##ₘ x -> m ##ₘ x.
+  steps e m e' m' → m' ##ₘ x -> m ##ₘ x.
 Proof.
   induction 1; eauto using step_heap_mono.
 Qed.
 
 Lemma steps_frame_equiv e m e' m' :
-  steps e m e' m' <-> ∀ mf, m' ##ₘ mf -> steps e (m ∪ mf) e' (m' ∪ mf).
+  steps e m e' m' ↔ ∀ mf, m' ##ₘ mf → steps e (m ∪ mf) e' (m' ∪ mf).
 Proof.
   split.
   - induction 1; eauto using steps.
@@ -1536,30 +1536,61 @@ Plan:
   ```
 - [ ] Completeness theorem (?)
 
-*)
-Definition unsafe e m :=
-  ∃ m' e', steps e m e' m' ∧ (is_error e' m') ∧ not (is_val e').
+ *)
 
-Lemma soundness e m:
-  hoare_err iEmp e (iOwn m) → unsafe e ∅.
+Definition unsafe e :=
+  ∃ m m' e', steps e m e' m' ∧ (is_error e' m').
+
+Definition inhabited ( P : iProp) := ∃ m, P m.
+
+Definition unsafe' e Q :=
+  ∀ m', Q m' → ∃ e' m, steps e m e' m' ∧ is_error e' m'.
+
+Lemma unsafe_unsafe' e Q :
+  inhabited Q → unsafe' e Q → unsafe e.
 Proof.
-  intro.
-  unfold hoare_err in H.
-  unfold unsafe.
-  exists m.
-  specialize (H m).
-  assert (post e iEmp None m)%S.
-  apply H.
-  unfold iOwn. reflexivity.
-  assert (m ##ₘ ∅). { apply map_disjoint_empty_r. }
-  specialize (H0 ∅ H1) as (m' & e' & Hdisj & Hemp & Hsteps & Hnotval & Hnotstep).
-  rewrite right_id in Hnotstep.
-  rewrite ! right_id in Hsteps.
-  iUnfold.
-  subst m'.
-  simpl in *.
-  exists e'.
-  do 2 (split; eauto).
-  unfold is_error.
-  do 2 (split; eauto).
+  intros [??] [?[??]].
+  - eauto.
+  - exists x1, x, x0. eauto.
 Qed.
+
+Lemma soundness' Q e :
+  hoare_err iTrue e Q → unsafe' e Q.
+Proof.
+  intros.
+  unfold hoare_err in H.
+  intros ??.
+  specialize (H m' H0).
+  specialize (H ∅) as (?&?&?&?&?&?).
+  - solve_map_disjoint.
+  - unfold is_error_or_val in H3.
+    exists x0, (x ∪ ∅).
+    split; rewrite ! map_union_empty in H2, H3; auto.
+    + rewrite map_union_empty.
+      assumption.
+Qed.
+
+Lemma soundness Q e :
+  inhabited Q →
+  hoare_err iTrue e Q →
+  unsafe e.
+Proof.
+  eauto using soundness', unsafe_unsafe'.
+Qed.
+
+Definition safe e :=
+  ∀ m e' m', steps e m e' m' →
+             (is_val e') ∨
+             (∃ e'' m'', step e' m' e'' m'').
+
+
+Definition safe' e :=
+  ∀ m e' m', steps e m e' m' →
+             ¬ (∃ e'' m'', step e' m' e'' m'') →
+             is_val e'.
+
+
+Definition safe'' e :=
+  ∀ m e' m', steps e m e' m' →
+             ¬ is_val e' →
+             (∃ e'' m'', step e' m' e'' m'').
