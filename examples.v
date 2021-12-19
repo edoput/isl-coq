@@ -263,3 +263,5 @@ Proof.
         reflexivity.
       * solve_map_disjoint.
 Qed.
+
+Print Assumptions client_unsafe.
