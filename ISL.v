@@ -1005,24 +1005,6 @@ Section hoare.
       + apply iEntails_refl.
   Qed.
 
-  Lemma hoare_ctxSN_iris' E P' P e Q v:
-    {{ P }} e {{ r, P' r }} →
-    (∀ w, {{ P' w }} (fill E (EVal w)) {{ERR: Q w}}) →
-    {{ P }} (fill E e) {{ERR: Q v}}.
-  Proof.
-    intros.
-    specialize (H0 v).
-    unfold hoare in *.
-    intro.
-    eapply iEntails_trans.
-    2:{ apply post_ctxS. }
-    eapply iEntails_trans.
-    - apply H0.
-    - eapply post_mono.
-      + apply H.
-      + apply iEntails_refl.
-  Qed.
-
   Lemma hoare_ctxSN E P' v P e Q:
     {{ P }} e {{ r,  @[ r = v ] ∗ P' r }} →
     {{ P' v }} (fill E (EVal v)) {{ERR: Q }} →
@@ -1044,6 +1026,42 @@ Section hoare.
       apply iPure_intro.
       reflexivity.
       apply iEntails_refl.
+  Qed.
+
+   Lemma hoare_ctxSN_iris E P' P e Q:
+    {{ P }} e {{ r, P' r }} →
+    (∀ w, {{ P' w }} (fill E (EVal w)) {{ERR: Q}}) →
+    {{ P }} (fill E e) {{ERR: Q }}.
+  Proof.
+    intros.
+    unfold hoare_err.
+    intros.
+    eapply iEntails_trans.
+    2: { apply (post_ctxS E e P None VUnit). }
+    unfold hoare in *.
+    eapply post_mono.
+    - apply H.
+    - eapply post_mono.
+      2: { apply H0. }
+      apply iEntails_refl.
+  Qed.
+
+  Lemma hoare_ctxSN_iris' E P' P e Q v:
+    {{ P }} e {{ r, P' r }} →
+    (∀ w, {{ P' w }} (fill E (EVal w)) {{ERR: Q w}}) →
+    {{ P }} (fill E e) {{ERR: Q v}}.
+  Proof.
+    intros.
+    specialize (H0 v).
+    unfold hoare in *.
+    intro.
+    eapply iEntails_trans.
+    2:{ apply post_ctxS. }
+    eapply iEntails_trans.
+    - apply H0.
+    - eapply post_mono.
+      + apply H.
+      + apply iEntails_refl.
   Qed.
 
   Lemma hoare_ctxN E P e e' Q:
@@ -1318,7 +1336,7 @@ Section hoare.
   Lemma hoare_seqS' R P Q e₁ e₂:
     {{ P }} e₁ {{ r, R }} →
     {{ R }} e₂ {{ r, Q r }} →
-    {{ P }} (ESeq e₁ e₂) {{ r, Q r }}.
+    {{ P }} ESeq e₁ e₂ {{ r, Q r }}.
   Proof.
     intros.
     eapply (hoare_ctxS_iris [(SeqCtx e₂)] (λ _, R) P e₁ Q); eauto.
@@ -1349,6 +1367,20 @@ Section hoare.
     eapply hoare_pure_stepN.
     intro. eauto with astep.
     auto.
+  Qed.
+
+  Lemma hoare_seqSN' R P Q e₁ e₂:
+    {{ P }} e₁ {{ r, R }} →
+    {{ R }} e₂ {{ERR: Q }} →
+    {{ P }} ESeq e₁ e₂ {{ERR: Q }}.
+  Proof.
+    intros.
+    eapply (hoare_ctxSN_iris [(SeqCtx e₂)] (λ _, R)); eauto.
+    intro.
+    simpl.
+    eapply hoare_pure_stepN.
+    - intro. eauto with astep.
+    - auto.
   Qed.
 
   Lemma hoare_op op v₁ v₂ v:
