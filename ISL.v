@@ -1,4 +1,5 @@
 From iris.bi Require Import bi.
+
 Require Export lang.
 
 Delimit Scope S with S.
@@ -200,7 +201,7 @@ Definition post' (e : expr) (P : iProp) (v : option val) : iProp :=
   λ m', ∃ m e', P m ∧ steps e m e' m' ∧ is_error_or_val v e' m'.
 
 Lemma post_post' e P v m' :
-  post e P v m' <-> post' e P v m'.
+  post e P v m' ↔ post' e P v m'.
 Proof.
   split.
   - intros ?. specialize (H ∅).
@@ -863,9 +864,6 @@ Section hoare.
         * apply iWand_intro_l.
           apply iSep_emp_r_inv.
   Qed.
-
-
-
 
   Lemma hoare_introS (Φ : val → Prop) P e Q:
     (∀ v, Φ v → {{ P }} e {{ r, Q r }}) → {{ P }} e {{ r, @[ Φ r ] ∗ Q r}}.
@@ -1626,3 +1624,80 @@ Definition safe'' e :=
   ∀ m e' m', steps e m e' m' →
              ¬ is_val e' →
              (∃ e'' m'', step e' m' e'' m'').
+
+Require Import Classical.
+
+Lemma safe_safe' e:
+  safe e ↔ safe' e.
+Proof.
+  split.
+  - intros ??????.
+    destruct (H m e' m' H0).
+    + assumption.
+    + exfalso.
+      destruct H2 as [?[??]].
+      apply H1.
+      eauto.
+  - intros ?????.
+    specialize (H m e' m' H0).
+    classical_left.
+    auto.
+Qed.
+
+Lemma safe_safe'' e:
+  safe e ↔ safe'' e.
+Proof.
+Admitted.
+
+Lemma foo e :
+  safe e → unsafe e → False.
+Proof.
+  intros ?[?[?[?(?&?)]]].
+  destruct (H x x1 x0 H0).
+  - destruct H1 as (?&?); auto.
+  - destruct H1 as (?&?).
+    destruct H2 as [?[?]].
+    eapply H3; eauto.
+Qed.
+
+Lemma foo1 e:
+  safe e →  ¬ unsafe e.
+Proof.
+  intros ??.
+  eauto using foo.
+Qed.
+
+Lemma foo2 e:
+  unsafe e → ¬ safe e.
+  intros ??.
+  eapply foo1; eauto.
+Qed.
+
+
+Lemma foo3 e:
+  ¬ unsafe e → safe e.
+Proof.
+Admitted.
+
+Lemma foo4 e:
+  unsafe e ↔ ¬ safe e.
+Proof.
+  split.
+  - eauto using foo2.
+  - intro.
+    apply NNPP.
+    intro.
+    apply H.
+    apply foo3.
+    assumption.
+Qed.
+
+(*
+¬ unsafe e ↔ safe e  (constructively valid)
+unsafe e ↔ ¬ safe e  (only classically valid)
+
+Require Import Classical.
+apply NNPP
+naive_solver
+firstorder
+ *)
