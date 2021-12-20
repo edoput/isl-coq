@@ -590,6 +590,18 @@ Section derived_post_rules.
 
 End derived_post_rules.
 
+Definition hoare (P : iProp) (e : expr) (Q : val -> iProp) : Prop :=
+  ∀ v, (Q v) ⊢ (post e P (Some v)).
+
+Definition hoare_err (P : iProp) (e : expr) (Q : iProp) : Prop :=
+  Q ⊢ (post e P None).
+
+Notation "{{ P }} e {{ v , Q }}" := (hoare P%S e (λ v, Q%S))
+  (at level 20, e, P at level 200, Q at level 200, only parsing).
+
+Notation "{{ P }} e {{ERR: Q }}" := (hoare_err P%S e Q%S)
+  (at level 20, e, P at level 200, Q at level 200, only parsing).
+
 Section hoare.
 
   (* the incorrectness triple is valid if for any state describe by (Q v)
@@ -598,17 +610,7 @@ Section hoare.
     Point wise entailment here represents the subset relation so (Q v) ⊂ post e P v
 
     NB this is still correct for Q v = false as no heap satisfies false *)
-  Definition hoare (P : iProp) (e : expr) (Q : val -> iProp) : Prop :=
-    ∀ v, (Q v) ⊢ (post e P (Some v)).
 
-  Definition hoare_err (P : iProp) (e : expr) (Q : iProp) : Prop :=
-    Q ⊢ (post e P None).
-
-  Notation "{{ P }} e {{ v , Q }}" := (hoare P%S e (λ v, Q%S))
-    (at level 20, e, P at level 200, Q at level 200, only parsing).
-
-  Notation "{{ P }} e {{ERR: Q }}" := (hoare_err P%S e Q%S)
-    (at level 20, e, P at level 200, Q at level 200, only parsing).
 
 
   Definition hoare' (P : iProp) (e : expr) (Q : val -> iProp) : Prop :=
@@ -1585,7 +1587,7 @@ Proof.
 Qed.
 
 Lemma soundness' Q e :
-  hoare_err iTrue e Q → unsafe' e Q.
+  {{ iTrue }} e {{ERR: Q }} → unsafe' e Q.
 Proof.
   intros.
   unfold hoare_err in H.
@@ -1602,7 +1604,7 @@ Qed.
 
 Lemma soundness Q e :
   inhabited Q →
-  hoare_err iTrue e Q →
+  {{ iTrue }} e {{ERR: Q }} →
   unsafe e.
 Proof.
   eauto using soundness', unsafe_unsafe'.
