@@ -1650,7 +1650,7 @@ Proof.
   unfold safe,safe''.
 Admitted.
 
-Lemma foo e :
+Lemma not_safe_and_unsafe e :
   safe e → unsafe e → False.
 Proof.
   intros ?[?[?[?(?&?)]]].
@@ -1661,27 +1661,27 @@ Proof.
     eapply H3; eauto.
 Qed.
 
-Lemma foo1 e:
+Lemma safe_not_unsafe e:
   safe e →  ¬ unsafe e.
 Proof.
   intros ??.
   eauto using foo.
 Qed.
 
-Lemma foo2 e:
+Lemma unsafe_not_safe e:
   unsafe e → ¬ safe e.
   intros ??.
   eapply foo1; eauto.
 Qed.
 
-Lemma foo3 e:
+Lemma not_unsafe_safe e:
   ¬ unsafe e → safe e.
 Proof.
   unfold unsafe, safe, is_error.
   intros. apply NNPP. naive_solver.
 Qed.
 
-Lemma foo4 e:
+Lemma unsafe_iff_not_safe e:
   unsafe e ↔ ¬ safe e.
 Proof.
   split.
