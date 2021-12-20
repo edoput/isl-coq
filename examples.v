@@ -236,7 +236,6 @@ Qed.
 Lemma client_unsafe:
   unsafe client.
 Proof.
-<<<<<<< Updated upstream
   eapply soundness.
   2:{ eapply hoare_consN.
       3:{ apply client_error. }
@@ -262,38 +261,10 @@ Proof.
       * rewrite <- insert_union_singleton_l.
         reflexivity.
       * solve_map_disjoint.
-=======
-  intros m H.
-  destruct H as (m1 & m2 & H1 & H2 & H & Hdisj).
-  exists ∅, (m1 ∪ m2).
-  split; eauto.
-  - apply iPure_intro.
-    + intro.
-      iUnfold.
-      eapply map_disjoint_spec.
-      * eassumption.
-      * subst m1.
-        apply lookup_singleton.
-      * subst m2.
-        subst l.
-        apply lookup_singleton.
-    + reflexivity.
-  - split; eauto.
-    unfold iTrue.
-    auto.
-    + split; eauto.
-      * rewrite left_id_L.
-        assumption.
-      * rewrite map_disjoint_union_r.
-        split; apply map_disjoint_empty_l.
 Qed.
 
-Lemma client_unsafe:
-  unsafe client ∅.
-Proof.
-  (*  (1 ↦ (VLoc 2) ∗ 0 ↦ ⊥ ∗ 2 ↦ VNat 0 *)
-  apply (soundness client (<[ 0 := Reserved ]> (<[ 1 := Value (VLoc 2) ]>  {[ 2 := Value (VNat 0) ]} ))).
-  simpl.
+Print Assumptions client_unsafe.
+
 Section RandomFree.
 
   (* in this section we are going to prove the two specs for a program
@@ -490,5 +461,3 @@ Proof.
         apply hoare_freeS.
    + apply hoare_freeN.
 Qed.
-
-Print Assumptions client_unsafe.
