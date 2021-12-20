@@ -1647,6 +1647,7 @@ Qed.
 Lemma safe_safe'' e:
   safe e ↔ safe'' e.
 Proof.
+  unfold safe,safe''.
 Admitted.
 
 Lemma foo e :
@@ -1673,11 +1674,12 @@ Lemma foo2 e:
   eapply foo1; eauto.
 Qed.
 
-
 Lemma foo3 e:
   ¬ unsafe e → safe e.
 Proof.
-Admitted.
+  unfold unsafe, safe, is_error.
+  intros. apply NNPP. naive_solver.
+Qed.
 
 Lemma foo4 e:
   unsafe e ↔ ¬ safe e.
@@ -1691,6 +1693,8 @@ Proof.
     apply foo3.
     assumption.
 Qed.
+
+
 
 (*
 ¬ unsafe e ↔ safe e  (constructively valid)
