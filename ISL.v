@@ -1,6 +1,6 @@
 From iris.bi Require Import bi.
 
-Require Export lang.
+From incorrectness Require Export lang.
 
 Delimit Scope S with S.
 
@@ -1667,13 +1667,13 @@ Lemma safe_not_unsafe e:
   safe e →  ¬ unsafe e.
 Proof.
   intros ??.
-  eauto using foo.
+  eauto using not_safe_and_unsafe.
 Qed.
 
 Lemma unsafe_not_safe e:
   unsafe e → ¬ safe e.
   intros ??.
-  eapply foo1; eauto.
+  eapply safe_not_unsafe; eauto.
 Qed.
 
 Lemma not_unsafe_safe e:
@@ -1687,23 +1687,11 @@ Lemma unsafe_iff_not_safe e:
   unsafe e ↔ ¬ safe e.
 Proof.
   split.
-  - eauto using foo2.
+  - eauto using unsafe_not_safe.
   - intro.
     apply NNPP.
     intro.
     apply H.
-    apply foo3.
+    apply not_unsafe_safe.
     assumption.
 Qed.
-
-
-
-(*
-¬ unsafe e ↔ safe e  (constructively valid)
-unsafe e ↔ ¬ safe e  (only classically valid)
-
-Require Import Classical.
-apply NNPP
-naive_solver
-firstorder
- *)

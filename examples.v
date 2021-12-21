@@ -1,9 +1,8 @@
 Require Import String.
 Open Scope string_scope.
-Require Export lang.
+From incorrectness Require Export lang.
 From iris.bi Require Import bi.
-Require Export ISL.
-
+From incorrectness Require Export ISL.
 
 Definition push_back (v : expr): expr :=
     (ELet "z" EAmb
@@ -461,3 +460,5 @@ Proof.
         apply hoare_freeS.
    + apply hoare_freeN.
 Qed.
+
+End DoubleFree.
