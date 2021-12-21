@@ -31,3 +31,5 @@ of a more primitive notion `post` that we use to define incorrectness triples.
 
 Chapter 5 describes at a high level the implementation of this mechanization
 and how it relates to the previous chapters.
+
+To build the project just run `make`.
