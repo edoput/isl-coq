@@ -596,10 +596,10 @@ Definition hoare (P : iProp) (e : expr) (Q : val -> iProp) : Prop :=
 Definition hoare_err (P : iProp) (e : expr) (Q : iProp) : Prop :=
   Q ⊢ (post e P None).
 
-Notation "{{ P }} e {{ v , Q }}" := (hoare P%S e (λ v, Q%S))
+Notation "[{ P }] e [{ v , Q }]" := (hoare P%S e (λ v, Q%S))
   (at level 20, e, P at level 200, Q at level 200, only parsing).
 
-Notation "{{ P }} e {{ERR: Q }}" := (hoare_err P%S e Q%S)
+Notation "[{ P }] e [{ERR: Q }]" := (hoare_err P%S e Q%S)
   (at level 20, e, P at level 200, Q at level 200, only parsing).
 
 Section hoare.
@@ -644,7 +644,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_trivial P e:
-    {{ P }} e {{ r, @[ False ] }}.
+    [{ P }] e [{ r, @[ False ] }].
   Proof.
     intro.
     apply iPure_elim'.
@@ -654,7 +654,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_trivialN P e:
-    {{ P }} e {{ERR: @[ False ] }}.
+    [{ P }] e [{ERR: @[ False ] }].
   Proof.
     intro.
     apply iPure_elim'.
@@ -664,7 +664,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_alloc l v:
-    {{ emp }} (EAlloc (EVal v)) {{ r, @[ r = VLoc l ] ∗ l ↦ v }}.
+    [{ emp }] (EAlloc (EVal v)) [{ r, @[ r = VLoc l ] ∗ l ↦ v }].
   Proof.
     intro v'.
     apply iPure_elim.
@@ -673,7 +673,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_fresh v :
-    {{ emp }} (EAlloc (EVal v)) {{ r, ∃ l, @[ r = VLoc l ] ∗ l ↦ v }}.
+    [{ emp }] (EAlloc (EVal v)) [{ r, ∃ l, @[ r = VLoc l ] ∗ l ↦ v }].
   Proof.
     intros v'.
     eapply iExists_elim.
@@ -684,7 +684,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_reuse l v :
-    {{ l ↦ ⊥ }} (EAlloc (EVal v)) {{ r, @[ r = VLoc l ] ∗ l ↦ v }}.
+    [{ l ↦ ⊥ }] (EAlloc (EVal v)) [{ r, @[ r = VLoc l ] ∗ l ↦ v }].
   Proof.
     intros v'.
     eapply iPure_elim.
@@ -693,7 +693,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_amb n :
-    {{ emp }} EAmb {{ v, @[ v = VNat n ] }}.
+    [{ emp }] EAmb [{ v, @[ v = VNat n ] }].
   Proof.
     intros v.
     eapply iPure_elim'.
@@ -702,7 +702,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_amb' :
-    {{ emp }} EAmb {{ v, ∃ n, @[ v = VNat n ] }}.
+    [{ emp }] EAmb [{ v, ∃ n, @[ v = VNat n ] }].
   Proof.
     intros v.
     eapply iExists_elim.
@@ -711,9 +711,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_disjS P₁ P₂ Q₁ Q₂ e :
-    {{ P₁ }} e {{ v, Q₁ v }} →
-    {{ P₂ }} e {{ v, Q₂ v }} →
-    {{ P₁ ∨ P₂ }} e {{ v, Q₁ v ∨ Q₂ v }}.
+    [{ P₁ }] e [{ v, Q₁ v }] →
+    [{ P₂ }] e [{ v, Q₂ v }] →
+    [{ P₁ ∨ P₂ }] e [{ v, Q₁ v ∨ Q₂ v }].
   Proof.
     unfold hoare.
     intros ?????. specialize (H v). specialize (H0 v).
@@ -724,9 +724,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_disjN P₁ P₂ Q₁ Q₂ e:
-    {{ P₁ }} e {{ERR: Q₁ }} →
-    {{ P₂ }} e {{ERR: Q₂ }} →
-    {{ P₁ ∨ P₂ }} e {{ERR: Q₁ ∨ Q₂ }}.
+    [{ P₁ }] e [{ERR: Q₁ }] →
+    [{ P₂ }] e [{ERR: Q₂ }] →
+    [{ P₁ ∨ P₂ }] e [{ERR: Q₁ ∨ Q₂ }].
   Proof.
     unfold hoare_err.
     intros ????.
@@ -737,7 +737,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_exists_forallS {A} P (Q : A → val → iProp) e :
-    (∀ x, {{ P }} e {{ v, Q x v }}) ↔ {{ P }} e {{ v, ∃ x, Q x v }}.
+    (∀ x, [{ P }] e [{ v, Q x v }]) ↔ [{ P }] e [{ v, ∃ x, Q x v }].
   Proof.
     unfold hoare.
     split; intro.
@@ -752,7 +752,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_exists_forallN {A} (P : iProp) e (Q : A → iProp):
-    (∀ x, {{ P }} e {{ERR: Q x }}) ↔ {{ P }} e {{ERR: ∃ x, Q x }}.
+    (∀ x, [{ P }] e [{ERR: Q x }]) ↔ [{ P }] e [{ERR: ∃ x, Q x }].
   Proof.
     unfold hoare_err.
     split; intro.
@@ -769,8 +769,8 @@ Section hoare.
   Lemma hoare_consS (P : iProp) (Q : val → iProp) (P' : iProp) e (Q' : val → iProp) :
     (P ⊢ P') →
     (∀ v, (Q' v) ⊢ (Q v)) →
-    {{ P }} e {{ v, Q v }} →
-    {{ P' }} e {{ v, Q' v }}.
+    [{ P }] e [{ v, Q v }] →
+    [{ P' }] e [{ v, Q' v }].
   Proof.
     intros.
     intro v.
@@ -787,8 +787,8 @@ Section hoare.
   Lemma hoare_consN (P P': iProp) e (Q Q' : iProp) :
     (P ⊢ P') →
     (Q' ⊢ Q) →
-    {{ P }} e {{ERR: Q}} →
-    {{ P' }} e {{ERR: Q'}}.
+    [{ P }] e [{ERR: Q}] →
+    [{ P' }] e [{ERR: Q'}].
   Proof.
     intros.
     unfold hoare_err in *.
@@ -800,8 +800,8 @@ Section hoare.
   Qed.
 
   Lemma hoare_frame_l R P Q e:
-    {{ P }} e {{ v,  Q  v }} →
-    {{ R ∗ P }} e {{v, R ∗ Q v}}.
+    [{ P }] e [{ v,  Q  v }] →
+    [{ R ∗ P }] e [{v, R ∗ Q v}].
   Proof.
     unfold hoare.
     intros.
@@ -812,8 +812,8 @@ Section hoare.
   Qed.
 
   Lemma hoare_frame_lN R P Q e:
-    {{ P }} e {{ERR: Q }} →
-    {{ R ∗ P }} e {{ERR: R ∗ Q }}.
+    [{ P }] e [{ERR: Q }] →
+    [{ R ∗ P }] e [{ERR: R ∗ Q }].
   Proof.
     unfold hoare_err.
     intros.
@@ -824,7 +824,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_wandS Q P e:
-    {{ P }} e {{ v, Q v }} ↔ (∀ R, {{ R }} e {{ v, (Q v) ∗ (P -∗ R) }}).
+    [{ P }] e [{ v, Q v }] ↔ (∀ R, [{ R }] e [{ v, (Q v) ∗ (P -∗ R) }]).
   Proof.
     unfold hoare.
     split; intros.
@@ -846,7 +846,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_wandN P Q e:
-    {{ P }} e {{ERR: Q }} ↔ (∀ R, {{ R }} e {{ERR: Q ∗ (P -∗ R) }}).
+    [{ P }] e [{ERR: Q }] ↔ (∀ R, [{ R }] e [{ERR: Q ∗ (P -∗ R) }]).
   Proof.
     unfold hoare_err.
     split; intros.
@@ -868,7 +868,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_introS (Φ : val → Prop) P e Q:
-    (∀ v, Φ v → {{ P }} e {{ r, Q r }}) → {{ P }} e {{ r, @[ Φ r ] ∗ Q r}}.
+    (∀ v, Φ v → [{ P }] e [{ r, Q r }]) → [{ P }] e [{ r, @[ Φ r ] ∗ Q r}].
   Proof.
     intros.
     unfold hoare in *.
@@ -876,7 +876,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_introN (Φ : Prop) P e Q:
-    (Φ → {{ P }} e {{ERR: Q}}) → {{ P }} e {{ERR: @[ Φ ] ∗ Q }}.
+    (Φ → [{ P }] e [{ERR: Q}]) → [{ P }] e [{ERR: @[ Φ ] ∗ Q }].
   Proof.
     intros.
     unfold hoare_err in *.
@@ -884,7 +884,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_freeS l v:
-    {{ l ↦ v }} EFree(EVal(VLoc l)) {{ v, @[ v = VUnit ] ∗ l ↦ ⊥ }}.
+    [{ l ↦ v }] EFree(EVal(VLoc l)) [{ v, @[ v = VUnit ] ∗ l ↦ ⊥ }].
   Proof.
     unfold hoare.
     intros.
@@ -894,13 +894,13 @@ Section hoare.
   Qed.
 
   Lemma hoare_freeN l :
-    {{ l ↦ ⊥ }} EFree(EVal(VLoc l)) {{ERR: l ↦ ⊥ }}.
+    [{ l ↦ ⊥ }] EFree(EVal(VLoc l)) [{ERR: l ↦ ⊥ }].
   Proof.
     apply post_freeN.
   Qed.
 
   Lemma hoare_loadS l w:
-    {{ l ↦ w}} ELoad(EVal(VLoc l)) {{ v, @[ v = w ] ∗ l ↦ w }}.
+    [{ l ↦ w}] ELoad(EVal(VLoc l)) [{ v, @[ v = w ] ∗ l ↦ w }].
   Proof.
     unfold hoare.
     intros.
@@ -910,13 +910,13 @@ Section hoare.
   Qed.
 
   Lemma hoare_loadN l:
-    {{ l ↦ ⊥ }} ELoad(EVal(VLoc l)) {{ERR: l ↦ ⊥ }}.
+    [{ l ↦ ⊥ }] ELoad(EVal(VLoc l)) [{ERR: l ↦ ⊥ }].
   Proof.
     apply post_loadN.
   Qed.
 
   Lemma hoare_storeS l v v':
-    {{ l ↦ v}} EStore (EVal (VLoc l)) (EVal v') {{ r, @[ r = VUnit ] ∗ l ↦ v' }}.
+    [{ l ↦ v}] EStore (EVal (VLoc l)) (EVal v') [{ r, @[ r = VUnit ] ∗ l ↦ v' }].
   Proof.
     unfold hoare.
     intros.
@@ -926,20 +926,20 @@ Section hoare.
   Qed.
 
   Lemma hoare_storeN l v:
-    {{ l ↦ ⊥ }} EStore (EVal (VLoc l)) (EVal v) {{ERR: l ↦ ⊥ }}.
+    [{ l ↦ ⊥ }] EStore (EVal (VLoc l)) (EVal v) [{ERR: l ↦ ⊥ }].
   Proof.
     apply post_storeN.
   Qed.
 
-  Lemma hoare_val v: {{ emp }} (EVal v) {{ r, @[ r = v ] }}.
+  Lemma hoare_val v: [{ emp }] (EVal v) [{ r, @[ r = v ] }].
   Proof.
     intro. apply iPure_elim'. intros ->. apply post_val.
   Qed.
 
   Lemma hoare_ctxS E Φ v P' P e Q:
-    {{ P }} e {{r, @[ Φ r ] ∗ P' r }} →
-    {{ @[ Φ v ] ∗ P' v }} (fill E (EVal v)) {{ r, Q r}} →
-    {{ P }} (fill E e) {{ r, Q r }}.
+    [{ P }] e [{r, @[ Φ r ] ∗ P' r }] →
+    [{ @[ Φ v ] ∗ P' v }] (fill E (EVal v)) [{ r, Q r}] →
+    [{ P }] (fill E e) [{ r, Q r }].
   Proof.
     intros HP H.
     unfold hoare in *.
@@ -954,9 +954,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_ctxS' E v P' P e Q:
-    {{ P }} e {{ r,  @[ r = v ] ∗ P' r }} →
-    {{ P' v }} (fill E (EVal v)) {{ r, Q r}} →
-    {{ P }} (fill E e) {{ r, Q r }}.
+    [{ P }] e [{ r,  @[ r = v ] ∗ P' r }] →
+    [{ P' v }] (fill E (EVal v)) [{ r, Q r}] →
+    [{ P }] (fill E e) [{ r, Q r }].
   Proof.
     intros HP H.
     eapply (hoare_ctxS E (λ r: val,  r = v) v P' P e Q).
@@ -972,9 +972,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_ctxS_iris E P' P e Q:
-    {{ P }} e {{ r, P' r}} →
-    (∀ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r}}) →
-    {{ P }} (fill E e) {{ r, Q r }}.
+    [{ P }] e [{ r, P' r}] →
+    (∀ v, [{ P' v }] (fill E (EVal v)) [{ r, Q r}]) →
+    [{ P }] (fill E e) [{ r, Q r }].
   Proof.
     intros HP H.
     unfold hoare.
@@ -988,9 +988,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_ctxS_iris' E P' P e Q v:
-    {{ P }} e {{ r, P' r }} →
-    (∀ w, {{ P' w }} (fill E (EVal w)) {{ r, Q w r}}) →
-    {{ P }} (fill E e) {{ r, Q v r }}.
+    [{ P }] e [{ r, P' r }] →
+    (∀ w, [{ P' w }] (fill E (EVal w)) [{ r, Q w r}]) →
+    [{ P }] (fill E e) [{ r, Q v r }].
   Proof.
     intros.
     specialize (H0 v).
@@ -1006,9 +1006,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_ctxSN E P' v P e Q:
-    {{ P }} e {{ r,  @[ r = v ] ∗ P' r }} →
-    {{ P' v }} (fill E (EVal v)) {{ERR: Q }} →
-    {{ P }} (fill E e) {{ERR: Q }}.
+    [{ P }] e [{ r,  @[ r = v ] ∗ P' r }] →
+    [{ P' v }] (fill E (EVal v)) [{ERR: Q }] →
+    [{ P }] (fill E e) [{ERR: Q }].
   Proof.
     intros HP H.
     unfold hoare.
@@ -1029,9 +1029,9 @@ Section hoare.
   Qed.
 
    Lemma hoare_ctxSN_iris E P' P e Q:
-    {{ P }} e {{ r, P' r }} →
-    (∀ w, {{ P' w }} (fill E (EVal w)) {{ERR: Q}}) →
-    {{ P }} (fill E e) {{ERR: Q }}.
+    [{ P }] e [{ r, P' r }] →
+    (∀ w, [{ P' w }] (fill E (EVal w)) [{ERR: Q}]) →
+    [{ P }] (fill E e) [{ERR: Q }].
   Proof.
     intros.
     unfold hoare_err.
@@ -1047,9 +1047,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_ctxSN_iris' E P' P e Q v:
-    {{ P }} e {{ r, P' r }} →
-    (∀ w, {{ P' w }} (fill E (EVal w)) {{ERR: Q w}}) →
-    {{ P }} (fill E e) {{ERR: Q v}}.
+    [{ P }] e [{ r, P' r }] →
+    (∀ w, [{ P' w }] (fill E (EVal w)) [{ERR: Q w}]) →
+    [{ P }] (fill E e) [{ERR: Q v}].
   Proof.
     intros.
     specialize (H0 v).
@@ -1066,8 +1066,8 @@ Section hoare.
 
   Lemma hoare_ctxN E P e e' Q:
    (fill E e) = e' →
-   {{ P }} e {{ERR: Q}} →
-   {{ P }} e' {{ERR: Q }}.
+   [{ P }] e [{ERR: Q}] →
+   [{ P }] e' [{ERR: Q }].
   Proof.
     intros.
     unfold hoare_err in *.
@@ -1085,27 +1085,27 @@ Section hoare.
        In  hoare_ctxS' we are required to be explicit about the resulting value v of the
        inner computation.
 
-       {{ P }} e {{ r,  @[ r = v ] ∗ P' r }} →
-       {{ P' v }} (fill E (EVal v)) {{ r, Q r}} →
-       {{ P }} (fill E e) {{ r, Q r }}.
+       [{ P }] e [{ r,  @[ r = v ] ∗ P' r }] →
+       [{ P' v }] (fill E (EVal v)) [{ r, Q r}] →
+       [{ P }] (fill E e) [{ r, Q r }].
 
        In hoare_ctxS_iris instead we are not, the universal quantification on the value
        filling the hole of the context guarantees us that any value will do.
 
-       {{ P }} e {{ r, P' r}} →
-       (∀ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r}}) →
-       {{ P }} (fill E e) {{ r, Q r }}.
+       [{ P }] e [{ r, P' r}] →
+       (∀ v, [{ P' v }] (fill E (EVal v)) [{ r, Q r}]) →
+       [{ P }] (fill E e) [{ r, Q r }].
 
        This rule though is not what we would expect for incorrectness logic.
        Consider this context K ≝ let x = ⬜ in if x ≥ 1 then x else error.
 
-       We know that K[n] has valid triples {{ n ∈ N }} K[n] {{ r, r ≥ 1 }}
-       and {{ n ∈ N }} K[n] {{ERR: n = 0}} but using this second rule we cannot
+       We know that K[n] has valid triples [{ n ∈ N }] K[n] [{ r, r ≥ 1 }]
+       and [{ n ∈ N }] K[n] [{ERR: n = 0}] but using this second rule we cannot
        prove the first triple.
 
        The result assertion r ≥ 1 cannot be reached when we substitute n = 0
        in the context and thefere it's not true that the intermediate triple
-       (∀ v, {{ P' v }} (fill E (EVal v)) {{ r, Q r}}) holds.
+       (∀ v, [{ P' v }] (fill E (EVal v)) [{ r, Q r}]) holds.
 
        This has happened because there can be two triples for the same program,
        one for correct termination and one for erroneous but we can only express
@@ -1115,13 +1115,13 @@ Section hoare.
        desired results for programs that may fault.
 
        It is true thought that we could restrict the triples for K to be
-       {{ n ≥ 1 }} K[n] {{ r, r ≥ 1 }} and {{ n = 0 }} K[n] {{ERR: n = 0}}
+       [{ n ≥ 1 }] K[n] [{ r, r ≥ 1 }] and [{ n = 0 }] K[n] [{ERR: n = 0}]
        like we would do in correctness logic but this still does not make
        the rule perform as expected.
 
-       We are now required to prove (∀ n, {{ n ≥ 1 }} K[n] {{ r, r ≥ 1 }})
+       We are now required to prove (∀ n, [{ n ≥ 1 }] K[n] [{ r, r ≥ 1 }])
        which means to also prove that the triple
-       {{ 0 ≥ 1 }} K[0] {{ r, r ≥ 1 }} holds.
+       [{ 0 ≥ 1 }] K[0] [{ r, r ≥ 1 }] holds.
 
        This triple is though not provable in incorrectness logic as the
        presumption 0 ≥ 1 ⊢ False. As there is no state satisfying the presumption
@@ -1129,20 +1129,20 @@ Section hoare.
 
        The alternative that can make this work is to also have the result assertion
        use the value w to constrain it in the same way the presumption n ≥ 1 would do in
-       correctness logic. This is a logical consequence of the {{ P }} e {{ r, False }}
+       correctness logic. This is a logical consequence of the [{ P }] e [{ r, False }]
        triple be the vacuous one. We can recover the idea of controlling which values
        w we will allow in our context by having Q w r ⊢ False when w is not accepted.
 
-       {{ P }} e {{ r, P' r }} →
-       (∀ w, {{ P' w }} (fill E (EVal w)) {{ r, Q w r}}) →
-       {{ P }} (fill E e) {{ r, Q v r }}.
+       [{ P }] e [{ r, P' r }] →
+       (∀ w, [{ P' w }] (fill E (EVal w)) [{ r, Q w r}]) →
+       [{ P }] (fill E e) [{ r, Q v r }].
 
-       This means that now the assertion (∀ w, {{ P' w }} (fill E (EVal w)) {{ r, Q w r}})
+       This means that now the assertion (∀ w, [{ P' w }] (fill E (EVal w)) [{ r, Q w r}])
        is provable and we can recover the Iris context rule.
 
-       {{ P }} e {{ r, r ∈ N }} →
-       ∀ w, {{ w ∈ N }} K[w] {{ r, r ≥ 1 ∧ w ≥ 1 }} →
-       {{ P }} K[e] {{ r, r ≥ 1 ∧ v ≥ 1 }}
+       [{ P }] e [{ r, r ∈ N }] →
+       ∀ w, [{ w ∈ N }] K[w] [{ r, r ≥ 1 ∧ w ≥ 1 }] →
+       [{ P }] K[e] [{ r, r ≥ 1 ∧ v ≥ 1 }]
 
        This leaves us with a universally quantified variable v which is not bound in the
        result assertion of our K[e] program. This inconvenience is required to recover
@@ -1156,9 +1156,9 @@ Section hoare.
      *)
 
     Lemma iris_to_ctxS E (Φ : val → Prop) P' P e Q v:
-      {{ P }} e {{ r, @[ Φ r ] ∗ P' r }} →
-      {{ @[ Φ v ] ∗ P' v }} (fill E (EVal v)) {{ r, Q r }} →
-      {{ P }} (fill E e) {{ r , Q r }}.
+      [{ P }] e [{ r, @[ Φ r ] ∗ P' r }] →
+      [{ @[ Φ v ] ∗ P' v }] (fill E (EVal v)) [{ r, Q r }] →
+      [{ P }] (fill E e) [{ r , Q r }].
     Proof.
       intros.
       eapply hoare_consS.
@@ -1190,9 +1190,9 @@ Section hoare.
     Qed.
 
     Lemma iris_to_ctxSN E P' v P e Q:
-      {{ P }} e {{ r, @[ r = v ] ∗ P' r }} →
-      {{ P' v }} (fill E (EVal v)) {{ERR: Q }}→
-      {{ P }} (fill E e) {{ERR: Q }}.
+      [{ P }] e [{ r, @[ r = v ] ∗ P' r }] →
+      [{ P' v }] (fill E (EVal v)) [{ERR: Q }]→
+      [{ P }] (fill E e) [{ERR: Q }].
     Proof.
       intros.
        eapply hoare_consN.
@@ -1241,8 +1241,8 @@ Section hoare.
 
   Lemma hoare_pure_step e' P e Q:
     pure_step e e' →
-    {{ P }} e' {{ r, Q r }} →
-    {{ P }} e  {{ r, Q r }}.
+    [{ P }] e' [{ r, Q r }] →
+    [{ P }] e  [{ r, Q r }].
   Proof.
     intros.
     unfold hoare in *.
@@ -1253,7 +1253,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_pure_stepN (P : iProp) (e e' : expr) (Q : iProp):
-    pure_step e e' → {{ P }} e' {{ERR: Q }} → {{ P }} e {{ERR: Q }}.
+    pure_step e e' → [{ P }] e' [{ERR: Q }] → [{ P }] e [{ERR: Q }].
   Proof.
     intro.
     unfold hoare_err.
@@ -1261,7 +1261,7 @@ Section hoare.
   Qed.
 
   Lemma hoare_no_step e P:
-    no_step e → {{ P }} e {{ERR: P}}.
+    no_step e → [{ P }] e [{ERR: P}].
   Proof.
     intros.
     apply post_no_step.
@@ -1270,9 +1270,9 @@ Section hoare.
 
   (* Derived rules *)
   Lemma hoare_let P' v P Q e₁ e₂ s:
-    {{ P }} e₁ {{ r, @[ r = v ] ∗ P' r }} →
-    {{ P' v }} (subst s v e₂) {{ r, Q r }} →
-    {{ P }} ELet s e₁ e₂ {{ r, Q r }}.
+    [{ P }] e₁ [{ r, @[ r = v ] ∗ P' r }] →
+    [{ P' v }] (subst s v e₂) [{ r, Q r }] →
+    [{ P }] ELet s e₁ e₂ [{ r, Q r }].
   Proof.
     intros ??.
     eapply (hoare_ctxS' [(LetCtx s e₂)]).
@@ -1284,9 +1284,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_letN P' v P Q s e₁ e₂:
-    {{ P }} e₁ {{ r, @[ r = v ] ∗ P' r }} →
-    {{ P' v }} (subst s v e₂) {{ERR: Q }} →
-    {{ P }} (ELet s e₁ e₂) {{ERR: Q}}.
+    [{ P }] e₁ [{ r, @[ r = v ] ∗ P' r }] →
+    [{ P' v }] (subst s v e₂) [{ERR: Q }] →
+    [{ P }] (ELet s e₁ e₂) [{ERR: Q}].
   Proof.
     intros ??.
     eapply (hoare_ctxSN [(LetCtx s e₂)]).
@@ -1298,8 +1298,8 @@ Section hoare.
   Qed.
 
   Lemma hoare_while P e Q t:
-    {{ P }} EIf t (ESeq e (EWhile t e)) (EVal (VUnit)) {{ r, Q }} →
-    {{ P }} EWhile t e {{ r, Q }}.
+    [{ P }] EIf t (ESeq e (EWhile t e)) (EVal (VUnit)) [{ r, Q }] →
+    [{ P }] EWhile t e [{ r, Q }].
   Proof.
     unfold hoare.
     intros H v.
@@ -1309,8 +1309,8 @@ Section hoare.
   Qed.
 
   Lemma hoare_whileN P e Q t:
-    {{ P }} EIf t (ESeq e (EWhile t e)) (EVal (VUnit)) {{ERR: Q }} →
-    {{ P }} EWhile t e {{ERR: Q }}.
+    [{ P }] EIf t (ESeq e (EWhile t e)) (EVal (VUnit)) [{ERR: Q }] →
+    [{ P }] EWhile t e [{ERR: Q }].
   Proof.
     unfold hoare_err.
     intros H.
@@ -1320,9 +1320,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_seqS R v P Q e₁ e₂:
-    {{ P }} e₁ {{ r, @[ r = v ] ∗ R r }} →
-    {{ R v }} e₂ {{ r, Q r }} →
-    {{ P }} (ESeq e₁ e₂) {{ r, Q r }}.
+    [{ P }] e₁ [{ r, @[ r = v ] ∗ R r }] →
+    [{ R v }] e₂ [{ r, Q r }] →
+    [{ P }] (ESeq e₁ e₂) [{ r, Q r }].
   Proof.
     intros.
     eapply (hoare_ctxS' [(SeqCtx e₂)]); eauto.
@@ -1334,9 +1334,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_seqS' R P Q e₁ e₂:
-    {{ P }} e₁ {{ r, R }} →
-    {{ R }} e₂ {{ r, Q r }} →
-    {{ P }} ESeq e₁ e₂ {{ r, Q r }}.
+    [{ P }] e₁ [{ r, R }] →
+    [{ R }] e₂ [{ r, Q r }] →
+    [{ P }] ESeq e₁ e₂ [{ r, Q r }].
   Proof.
     intros.
     eapply (hoare_ctxS_iris [(SeqCtx e₂)] (λ _, R) P e₁ Q); eauto.
@@ -1349,17 +1349,17 @@ Section hoare.
   Qed.
 
   Lemma haore_seqN P Q e₁ e₂:
-    {{ P }} e₁ {{ERR: Q}} →
-    {{ P }} ESeq e₁ e₂ {{ERR: Q }}.
+    [{ P }] e₁ [{ERR: Q}] →
+    [{ P }] ESeq e₁ e₂ [{ERR: Q }].
   Proof.
     intros.
     eapply (hoare_ctxN  [(SeqCtx e₂)]); eauto.
   Qed.
 
   Lemma hoare_seqSN R v P Q e₁ e₂:
-    {{ P }} e₁ {{ r , @[ r = v ] ∗ R r }} →
-    {{ R v }} e₂ {{ERR: Q }} →
-    {{ P }} ESeq e₁ e₂ {{ERR: Q }}.
+    [{ P }] e₁ [{ r , @[ r = v ] ∗ R r }] →
+    [{ R v }] e₂ [{ERR: Q }] →
+    [{ P }] ESeq e₁ e₂ [{ERR: Q }].
   Proof.
     intros.
     eapply (hoare_ctxSN [(SeqCtx e₂)]); eauto.
@@ -1370,9 +1370,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_seqSN' R P Q e₁ e₂:
-    {{ P }} e₁ {{ r, R }} →
-    {{ R }} e₂ {{ERR: Q }} →
-    {{ P }} ESeq e₁ e₂ {{ERR: Q }}.
+    [{ P }] e₁ [{ r, R }] →
+    [{ R }] e₂ [{ERR: Q }] →
+    [{ P }] ESeq e₁ e₂ [{ERR: Q }].
   Proof.
     intros.
     eapply (hoare_ctxSN_iris [(SeqCtx e₂)] (λ _, R)); eauto.
@@ -1385,7 +1385,7 @@ Section hoare.
 
   Lemma hoare_op op v₁ v₂ v:
     eval_bin_op op v₁ v₂ = Some v →
-    {{ emp }} (EOp op (EVal v₁) (EVal v₂)) {{ r, @[ r = v ] }}.
+    [{ emp }] (EOp op (EVal v₁) (EVal v₂)) [{ r, @[ r = v ] }].
   Proof.
     unfold hoare.
     intros.
@@ -1395,9 +1395,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_if_true P' P Q t e₁ e₂:
-    {{ P }} t {{ r, @[ r = VBool true ] ∗ P' r }} →
-    {{ P' (VBool true) }} e₁ {{ r, Q r }} →
-    {{ P }} EIf t e₁ e₂ {{ r, Q r }}.
+    [{ P }] t [{ r, @[ r = VBool true ] ∗ P' r }] →
+    [{ P' (VBool true) }] e₁ [{ r, Q r }] →
+    [{ P }] EIf t e₁ e₂ [{ r, Q r }].
   Proof.
     intros.
     eapply (hoare_ctxS' [(IfCtx e₁ e₂)]); eauto.
@@ -1408,9 +1408,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_if_trueN P' P Q t e₁ e₂:
-    {{ P }} t {{ r, @[ r = VBool true ] ∗ P' r }} →
-    {{ P' (VBool true) }} e₁ {{ERR: Q }} →
-    {{ P }} EIf t e₁ e₂ {{ERR: Q }}.
+    [{ P }] t [{ r, @[ r = VBool true ] ∗ P' r }] →
+    [{ P' (VBool true) }] e₁ [{ERR: Q }] →
+    [{ P }] EIf t e₁ e₂ [{ERR: Q }].
   Proof.
     intros.
     eapply (hoare_ctxSN [(IfCtx e₁ e₂)]); eauto.
@@ -1420,9 +1420,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_if_false P' P Q t e₁ e₂:
-    {{ P }} t {{ r, @[ r = VBool false ] ∗ P' r }} →
-    {{ P' (VBool false) }} e₂ {{ r, Q r }} →
-    {{ P }} EIf t e₁ e₂ {{ r, Q r }}.
+    [{ P }] t [{ r, @[ r = VBool false ] ∗ P' r }] →
+    [{ P' (VBool false) }] e₂ [{ r, Q r }] →
+    [{ P }] EIf t e₁ e₂ [{ r, Q r }].
   Proof.
     intros.
     eapply (hoare_ctxS' [(IfCtx e₁ e₂)]); eauto.
@@ -1433,9 +1433,9 @@ Section hoare.
   Qed.
 
   Lemma hoare_if_falseN P' P Q t e₁ e₂:
-    {{ P }} t {{ r, @[ r = VBool false ] ∗ P' r }} →
-    {{ P' (VBool false) }} e₂ {{ERR: Q }} →
-    {{ P }} EIf t e₁ e₂ {{ERR: Q }}.
+    [{ P }] t [{ r, @[ r = VBool false ] ∗ P' r }] →
+    [{ P' (VBool false) }] e₂ [{ERR: Q }] →
+    [{ P }] EIf t e₁ e₂ [{ERR: Q }].
   Proof.
     intros.
     eapply (hoare_ctxSN [(IfCtx e₁ e₂)]); eauto.
@@ -1445,14 +1445,14 @@ Section hoare.
   Qed.
 
   Lemma hoare_error P:
-    {{ P }} EError {{ERR: P }}.
+    [{ P }] EError [{ERR: P }].
   Proof.
     eauto using hoare_no_step, no_step_EError.
   Qed.
 
   Lemma hoare_frame_r R P Q e:
-    {{ P }} e {{ r, Q r }} →
-    {{ P ∗ R }} e {{ r, Q r ∗ R }}.
+    [{ P }] e [{ r, Q r }] →
+    [{ P ∗ R }] e [{ r, Q r ∗ R }].
   Proof.
     intros.
     eapply hoare_consS.
@@ -1464,8 +1464,8 @@ Section hoare.
   Qed.
 
   Lemma hoare_frame_rN R P Q e:
-    {{ P }} e {{ERR: Q }} →
-    {{ P ∗ R }} e {{ERR: Q ∗ R }}.
+    [{ P }] e [{ERR: Q }] →
+    [{ P ∗ R }] e [{ERR: Q ∗ R }].
   Proof.
     intros.
     eapply hoare_consN.
@@ -1492,7 +1492,7 @@ Section hoare.
       Have we broken the wand for this extension of SL assertions?
      *)
     Lemma hoare_wand_freeS R l v:
-      {{ R }} (EFree (EVal (VLoc l))) {{ x, (λ x, @[ x = VUnit ] ∗ l ↦ ⊥) x ∗ ((l ↦ v) -∗ R) }}.
+      [{ R }] (EFree (EVal (VLoc l))) [{ x, (λ x, @[ x = VUnit ] ∗ l ↦ ⊥) x ∗ ((l ↦ v) -∗ R) }].
     Proof.
       revert R.
       erewrite <- hoare_wandS.
@@ -1587,7 +1587,7 @@ Proof.
 Qed.
 
 Lemma soundness' Q e :
-  {{ iTrue }} e {{ERR: Q }} → unsafe' e Q.
+  [{ iTrue }] e [{ERR: Q }] → unsafe' e Q.
 Proof.
   intros.
   unfold hoare_err in H.
@@ -1604,7 +1604,7 @@ Qed.
 
 Lemma soundness Q e :
   inhabited Q →
-  {{ iTrue }} e {{ERR: Q }} →
+  [{ iTrue }] e [{ERR: Q }] →
   unsafe e.
 Proof.
   eauto using soundness', unsafe_unsafe'.
@@ -1615,42 +1615,7 @@ Definition safe e :=
              (is_val e') ∨
              (∃ e'' m'', step e' m' e'' m'').
 
-
-Definition safe' e :=
-  ∀ m e' m', steps e m e' m' →
-             ¬ (∃ e'' m'', step e' m' e'' m'') →
-             is_val e'.
-
-
-Definition safe'' e :=
-  ∀ m e' m', steps e m e' m' →
-             ¬ is_val e' →
-             (∃ e'' m'', step e' m' e'' m'').
-
 Require Import Classical.
-
-Lemma safe_safe' e:
-  safe e ↔ safe' e.
-Proof.
-  split.
-  - intros ??????.
-    destruct (H m e' m' H0).
-    + assumption.
-    + exfalso.
-      destruct H2 as [?[??]].
-      apply H1.
-      eauto.
-  - intros ?????.
-    specialize (H m e' m' H0).
-    classical_left.
-    auto.
-Qed.
-
-Lemma safe_safe'' e:
-  safe e ↔ safe'' e.
-Proof.
-  unfold safe,safe''.
-Admitted.
 
 Lemma not_safe_and_unsafe e :
   safe e → unsafe e → False.

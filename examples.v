@@ -279,8 +279,8 @@ Section RandomFree.
      Instead of using the full ∃ x y, x ↦ v ∗ y ↦ ⊥ presumption we are going
      to frame them as our location l will be in one of the two singletons at a time
 
-     {{ ∃ x y, x ↦ v ∗ y ↦ ⊥ }} free l {{ r . ∃ x y, x ↦ ⊥ ∗ y ↦ ⊥ ∗ ⌜ x = l ⌝ }}
-     {{ ∃ x y, x ↦ v ∗ y ↦ ⊥ }} free l {{ERR: ∃ x y, x ↦ v ∗ y ↦ ⊥ ∗ ⌜ y = l ⌝ }}
+     [{ ∃ x y, x ↦ v ∗ y ↦ ⊥ }] free l [{ r . ∃ x y, x ↦ ⊥ ∗ y ↦ ⊥ ∗ ⌜ x = l ⌝ }]
+     [{ ∃ x y, x ↦ v ∗ y ↦ ⊥ }] free l [{ERR: ∃ x y, x ↦ v ∗ y ↦ ⊥ ∗ ⌜ y = l ⌝ }]
 
      As we can see both triples will have a pure assertion ⌜ ? = l ⌝ and without
      that we cannot make. free l only steps through safely if x = l and will error
@@ -347,8 +347,8 @@ Section DoubleFree.
 
     the two triples we are interested in proving are
 
-    {{ emp }} e {{ x. ∃ l, x = VUnit ∗ l ↦ ⊥ }}
-    {{ emp }} e {{ERR: ∃ l, l ↦ ⊥ }}
+    [{ emp }] e [{ x. ∃ l, x = VUnit ∗ l ↦ ⊥ }]
+    [{ emp }] e [{ERR: ∃ l, l ↦ ⊥ }]
 
 *)
 
