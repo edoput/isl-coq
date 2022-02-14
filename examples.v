@@ -101,16 +101,19 @@ Proof.
                      apply hoare_storeS.
 Qed.
 
-Lemma client_error: hoare_err iEmp client (1 ↦ (VLoc 2) ∗ 0 ↦ ⊥ ∗ 2 ↦ VNat 0)%S.
+Lemma client_error: hoare_err iEmp client (∃ v v' f, v ↦ (VLoc v') ∗ f ↦ ⊥ ∗ v' ↦ VNat 0)%S.
 Proof.
+  rewrite <- hoare_exists_forallN; intro vec.
+  rewrite <- hoare_exists_forallN; intro new.
+  rewrite <- hoare_exists_forallN; intro old.
   unfold client.
   (* we first apply hoare_let 3 times *)
   (* let w = ref 0 *)
-  eapply (hoare_letN (λ v, 0 ↦ (VNat 0)) (VLoc 0))%S.
+  eapply (hoare_letN (λ v, old ↦ (VNat 0)) (VLoc old))%S.
   - apply hoare_alloc.
   - simpl.
     (* let v = ref w *)
-    eapply (hoare_letN (λ l, 1 ↦ (VLoc 0) ∗ 0 ↦ (VNat 0)) (VLoc 1))%S.
+    eapply (hoare_letN (λ l, vec ↦ (VLoc old) ∗ old ↦ (VNat 0)) (VLoc vec))%S.
     + (* ref w*)
       eapply hoare_consS.
       * apply iSep_emp_l_inv.
@@ -120,9 +123,8 @@ Proof.
         apply hoare_alloc.
     + simpl.
       (* let x = ! v *)
-      eapply (hoare_letN (λ v, 1 ↦ VLoc 0 ∗ 0 ↦ VNat 0) (VLoc 0))%S.
-      * (* TODO *)
-        eapply hoare_consS.
+      eapply (hoare_letN (λ v, vec ↦ VLoc old ∗ old ↦ VNat 0) (VLoc old))%S.
+      * eapply hoare_consS.
         -- apply iEntails_refl.
         -- intro.
            apply iSep_assoc.
@@ -130,9 +132,9 @@ Proof.
            apply hoare_frame_r.
            apply hoare_loadS.
       * simpl.
-        eapply (hoare_seqSN (λ l, 0 ↦ ⊥ ∗ 1 ↦ VLoc 2 ∗ 2 ↦ VNat 0) VUnit)%S.
+        eapply (hoare_seqSN (λ l, old ↦ ⊥ ∗ vec ↦ VLoc new ∗ new ↦ VNat 0) VUnit)%S.
         (* push_back, unfortunately I cannot use the previous lemma *)
-        -- eapply (hoare_let (λ v, 1 ↦ VLoc 0 ∗ 0 ↦ VNat 0) (VNat 1))%S.
+        -- eapply (hoare_let (λ v, vec ↦ VLoc old ∗ old ↦ VNat 0) (VNat 1))%S.
            ++ eapply hoare_consS.
               ** apply iSep_emp_l_inv.
               ** intro.  apply iEntails_refl.
@@ -140,7 +142,7 @@ Proof.
                  apply hoare_frame_r.
                  apply hoare_amb.
            ++ simpl.
-              eapply (hoare_if_false (λ v, 1 ↦ VLoc 0 ∗ 0 ↦ VNat 0))%S.
+              eapply (hoare_if_false (λ v, vec ↦ VLoc old ∗ old ↦ VNat 0))%S.
               ** eapply hoare_pure_step.
                  --- intro. eauto with astep.
                  --- simpl.
@@ -150,7 +152,7 @@ Proof.
                      +++ simpl.
                          apply hoare_frame_r.
                          apply hoare_val.
-              ** eapply (hoare_let (λ r, 1 ↦ VLoc 0 ∗ 0 ↦ VNat 0) (VLoc 0))%S.
+              ** eapply (hoare_let (λ r, vec ↦ VLoc old ∗ old ↦ VNat 0) (VLoc old))%S.
                  --- eapply hoare_consS.
                      +++ apply iEntails_refl.
                      +++ intro. apply iSep_assoc.
@@ -158,11 +160,12 @@ Proof.
                          apply hoare_frame_r.
                          apply  hoare_loadS.
                  --- simpl.
-                     eapply (hoare_consS (0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
+                     eapply (hoare_consS (old ↦ VNat 0 ∗ vec ↦ VLoc old))%S.
                      +++ apply iSep_comm.
                      +++ intro. apply iEntails_refl.
-                     +++ eapply (hoare_let (λ v,2 ↦ VNat 0 ∗ 0 ↦ VNat 0 ∗ 1 ↦ VLoc 0) (VLoc 2))%S.
-                         *** eapply (hoare_ctxS' [AllocCtx] (VNat 0) (λ v, 0 ↦ VNat 0 ∗ 1 ↦ VLoc 0))%S.
+                     +++ simpl.
+                         eapply (hoare_let (λ v, new ↦ VNat 0 ∗ old ↦ VNat 0 ∗ vec ↦ VLoc old) (VLoc new))%S.
+                         *** eapply (hoare_ctxS' [AllocCtx] (VNat 0) (λ v, old ↦ VNat 0 ∗ vec ↦ VLoc old))%S.
                              ---- eapply hoare_consS.
                                   ++++ apply iEntails_refl.
                                   ++++ intro. apply iSep_assoc.
@@ -176,9 +179,8 @@ Proof.
                                   ++++ simpl.
                                        apply hoare_frame_r.
                                        apply hoare_alloc.
-
                          *** simpl.
-                             eapply (hoare_seqS (λ v, 2 ↦ VNat 0 ∗ 0 ↦ ⊥ ∗ 1 ↦ VLoc 0) (VUnit))%S.
+                             eapply (hoare_seqS (λ v, new ↦ VNat 0 ∗ old ↦ ⊥ ∗ vec ↦ VLoc old) (VUnit))%S.
                              ---- eapply hoare_consS.
                                   ++++ apply iSep_assoc'.
                                   ++++ intro.
@@ -188,8 +190,8 @@ Proof.
                                        **** apply iSep_assoc.
                                   ++++ simpl.
                                        apply hoare_frame_r.
-                                       eapply (hoare_consS (0 ↦ VNat 0 ∗ 2 ↦ VNat 0)
-                                                           (λ r, (@[ r = VUnit ] ∗ 0 ↦ ⊥) ∗ 2 ↦ VNat 0)
+                                       eapply (hoare_consS (old ↦ VNat 0 ∗ new ↦ VNat 0)
+                                                           (λ r, (@[ r = VUnit ] ∗ old ↦ ⊥) ∗ new ↦ VNat 0)
                                               )%S.
                                        **** apply iSep_comm.
                                        **** intro.
@@ -199,8 +201,8 @@ Proof.
                                             apply iSep_comm.
                                        **** apply hoare_frame_r.
                                             apply hoare_freeS.
-                             ---- eapply (hoare_consS (1 ↦ VLoc 0 ∗ 0 ↦ ⊥ ∗ 2 ↦ VNat 0)
-                                                      (λ r, (@[ r = VUnit] ∗ 1 ↦ VLoc 2) ∗ 0 ↦ ⊥ ∗ 2 ↦ VNat 0))%S.
+                             ---- eapply (hoare_consS (vec ↦ VLoc old ∗ old ↦ ⊥ ∗ new ↦ VNat 0)
+                                                      (λ r, (@[ r = VUnit] ∗ vec ↦ VLoc new) ∗ old ↦ ⊥ ∗ new ↦ VNat 0))%S.
                                   ++++ eapply iEntails_trans.
                                        **** apply iSep_assoc.
                                        **** eapply iEntails_trans.
@@ -243,6 +245,7 @@ Proof.
   }
   unfold inhabited.
   exists {[ 1 := (Value (VLoc 2)) ; 0 := Reserved ; 2 := (Value (VNat 0)) ]}.
+  exists 1, 2, 0.
   exists {[ 1 := (Value (VLoc 2)) ]}, {[ 0 := Reserved ; 2 := (Value (VNat 0)) ]}.
   split.
   - done.
