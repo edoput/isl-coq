@@ -20,6 +20,8 @@ of notation and tactics from the Iris project. At the time of writing I am using
 the following versions: Coq 8.14.1, Stdpp dev.2021-12-09.0.e6194e28 and
 Iris dev.2021-12-16.0.f083f007.
 
+The project comes with a ISL.opam file to restore an opam switch environment.
+
 Each part is also described in depth in the thesis as follows.
 
 Chapter 2 describes the programming language syntax, operational semantics
